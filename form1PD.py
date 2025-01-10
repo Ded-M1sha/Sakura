@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
-from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk
+from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk, BooleanVar, Checkbutton
 
 
 def choose_column(df, root):
@@ -51,6 +51,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
 
         # Вызываем окно "Качество данных" до аппроксимации данных
         def calculate_quality_metrics(df):
+
             quality_data = []
             total_rows = len(df) - 1  # Исключаем строку заголовка
 
@@ -105,7 +106,221 @@ def process_form1(filepath, progress_var, root, on_form1_done):
 
             return quality_data, total_rows
 
-        # Создаем окно для отображения "Качество данных"
+        def countinue_without_changes():
+            # Добавляем расчет объема в м3 для единицы товара
+            df['Объем единицы, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
+
+
+            # Сохраняем результаты вычислений и исходные данные в новый Excel файл
+            output_path = "Форма 1 обработанная.xlsx"
+            with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+                # Сохраняем основной обработанный лист
+                df.to_excel(writer, index=False, sheet_name="Обработанные данные")
+
+            # Завершение обработки формы
+            on_form1_done(output_path)
+
+        def improve_data_quality():
+            """
+            Улучшает качество данных. Открывает окно для выбора
+            пользователем столбцов и проблем для обработки.
+            """
+            # Запрашиваем верхнюю границу объема у пользователя
+            upper_limit = get_upper_limit()
+            if upper_limit is None:  # Если пользователь отменил ввод
+                progress_var.set("Обработка формы 1 отменена.")
+                root.quit()
+                return
+
+            # Создаем окно для выбора столбцов и проблем
+            def show_selection_window():
+                """Открывает окно для выбора столбцов и проблем."""
+                selected_columns = []
+                selected_problems = {
+                    "remove_trailing_spaces": False,
+                    "convert_negatives": False,
+                    "handle_outliers": False,
+                    "null_replace": False
+                }
+
+                def submit_selection():
+                    """Фиксируем выбор пользователя."""
+                    for idx, col_var in enumerate(column_vars):
+                        if col_var.get():
+                            selected_columns.append(df.columns[idx])
+
+                    for problem, var in problem_vars.items():
+                        selected_problems[problem] = var.get()
+
+                    selection_window.destroy()
+
+                # Создаем окно
+                selection_window = Toplevel(root)
+                selection_window.title("Выбор обработки качества данных")
+
+                # Инструкции
+                Label(selection_window, text="Выберите столбцы для обработки:", font=("Arial", 12)).pack(pady=5)
+
+                # Чекбоксы для выбора столбцов
+                column_vars = []
+                for col in df.columns:
+                    var = BooleanVar()
+                    column_vars.append(var)
+                    Checkbutton(selection_window, text=col, variable=var).pack(anchor="w")
+
+                # Чекбоксы для выбора проблем
+                Label(selection_window, text="Выберите проблемы для обработки:", font=("Arial", 12)).pack(pady=5)
+
+                problem_vars = {
+                    "remove_trailing_spaces": BooleanVar(),
+                    "convert_negatives": BooleanVar(),
+                    "handle_outliers": BooleanVar(),
+                    "null_replace": BooleanVar(),
+                }
+
+                Checkbutton(selection_window, text="Убрать пробелы в конце значений",
+                            variable=problem_vars["remove_trailing_spaces"]).pack(anchor="w")
+                Checkbutton(selection_window, text="Заменить отрицательные значения на модули",
+                            variable=problem_vars["convert_negatives"]).pack(anchor="w")
+                Checkbutton(selection_window, text="Обработать выбросы",
+                            variable=problem_vars["handle_outliers"]).pack(anchor="w")
+                Checkbutton(selection_window, text="Аппроксимировать нули",
+                            variable=problem_vars["null_replace"]).pack(anchor="w")
+
+                Button(selection_window, text="Подтвердить выбор", command=submit_selection).pack(pady=10)
+
+                root.wait_window(selection_window)
+                return selected_columns, selected_problems
+
+            # Запрашиваем у пользователя столбцы и проблемы для обработки
+            columns_to_improve, problems_to_handle = show_selection_window()
+
+            if not columns_to_improve:
+                raise ValueError("Столбцы для обработки не выбраны.")
+            df['Объем единицы, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
+            # Очистка пробелов в конце значений
+            if problems_to_handle["remove_trailing_spaces"]:
+
+                for col in columns_to_improve:
+                    if df[col].dtype == 'object':
+                        df[col] = df[col].str.strip()
+
+            # Замена отрицательных значений на модули
+            if problems_to_handle["convert_negatives"]:
+
+
+                for col in columns_to_improve:
+                    if df[col].dtype in ['int64', 'float64']:
+                        df[col] = df[col].apply(lambda x: abs(x) if x < 0 else x)
+
+            # Обработка выбросов
+            if problems_to_handle["handle_outliers"]:
+
+                Q1 = df['Объем единицы, м3'].quantile(0.25)
+                Q3 = df['Объем единицы, м3'].quantile(0.75)
+                IQR = Q3 - Q1
+                mean_approximated = df['Объем единицы, м3'].mean()
+                median_approximated = df['Объем единицы, м3'].median()
+
+                if upper_limit == 0:
+                    Q6 = median_approximated if abs(
+                        median_approximated - mean_approximated) / mean_approximated > 0.1 else mean_approximated
+                else:
+                    Q6 = upper_limit
+
+                df['Является ли выбросом?'] = np.where(
+                    (df['Объем единицы, м3'] < (Q1 - 1.5 * IQR)) |
+                    (df['Объем единицы, м3'] > (Q3 + 1.5 * IQR)),
+                    'Да', 'Нет'
+                )
+
+                df['Объем единицы после обработки выбросов, м3'] = np.where(
+                    df['Является ли выбросом?'] == 'Да', Q6, df['Объем единицы, м3']
+                )
+
+            # Заполнение нулей
+            if problems_to_handle["null_replace"]:
+
+                column_to_approximate = choose_column(df, root)
+                if not column_to_approximate:
+                    raise ValueError("Столбец для аппроксимации не выбран.")
+
+                df['Объем единицы, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
+
+                unique_values = df[column_to_approximate].unique()
+                avg_volume_by_group = {}
+                global_mean = df['Объем единицы, м3'].mean(skipna=True)
+
+                for value in unique_values:
+                    group = df[df[column_to_approximate] == value]
+                    avg_volume = group['Объем единицы, м3'].mean(skipna=True)
+                    avg_volume_by_group[value] = avg_volume
+
+                for value, avg_volume in avg_volume_by_group.items():
+                    if np.isnan(avg_volume):
+                        avg_volume_by_group[value] = global_mean
+
+                df['Объем единицы после аппроксимации, м3'] = df.apply(
+                    lambda row: row['Объем единицы, м3'] if pd.notnull(row['Объем единицы, м3'])
+                    else avg_volume_by_group.get(row[column_to_approximate], global_mean), axis=1
+                )
+
+                Q1 = df['Объем единицы после аппроксимации, м3'].quantile(0.25)
+                Q3 = df['Объем единицы после аппроксимации, м3'].quantile(0.75)
+                IQR = Q3 - Q1
+                mean_approximated = df['Объем единицы после аппроксимации, м3'].mean()
+                median_approximated = df['Объем единицы после аппроксимации, м3'].median()
+
+                if upper_limit == 0:
+                    Q6 = median_approximated if abs(
+                        median_approximated - mean_approximated) / mean_approximated > 0.1 else mean_approximated
+                else:
+                    Q6 = upper_limit
+
+                df['Является ли выбросом?'] = np.where(
+                    (df['Объем единицы после аппроксимации, м3'] < (Q1 - 1.5 * IQR)) |
+                    (df['Объем единицы после аппроксимации, м3'] > (Q3 + 1.5 * IQR)),
+                    'Да', 'Нет'
+                )
+
+                df['Объем единицы после обработки выбросов, м3'] = np.where(
+                    df['Является ли выбросом?'] == 'Да', Q6, df['Объем единицы после аппроксимации, м3']
+                )
+
+                # Сохраняем результаты вычислений и исходные данные в новый Excel файл
+                output_path = "Форма 1 обработанная.xlsx"
+                with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+                    # Сохраняем основной обработанный лист
+                    df.to_excel(writer, index=False, sheet_name="Обработанные данные")
+
+                    # Создаем лист для данных аппроксимации
+                    df_approximation = pd.DataFrame({
+                        "Уникальное значение": avg_volume_by_group.keys(),
+                        "Средний объем, м3": avg_volume_by_group.values()
+                    })
+                    df_approximation.to_excel(writer, index=False, sheet_name="Данные аппроксимации")
+
+                    # Получаем доступ к книге и листу для добавления метрик
+                    workbook = writer.book
+                    sheet = workbook["Обработанные данные"]
+
+                    # Добавляем текстовые метки в ячейки P1-P6
+                    sheet["P1"] = "Q1"
+                    sheet["P2"] = "Q3"
+                    sheet["P3"] = "IQR"
+                    sheet["P4"] = "Среднее арифметическое после аппроксимации"
+                    sheet["P5"] = "Медиана после аппроксимации"
+                    sheet["P6"] = "Значение для замены"
+
+                    # Вписываем значения в ячейки Q1-Q6
+                    sheet["Q1"] = Q1  # Q1
+                    sheet["Q2"] = Q3  # Q3
+                    sheet["Q3"] = IQR  # IQR
+                    sheet["Q4"] = mean_approximated  # Среднее арифметическое
+                    sheet["Q5"] = median_approximated  # Медиана
+                    sheet["Q6"] = Q6  # Значение для замены
+            on_form1_done(output_path)
+
         def show_quality_window():
             quality_data, total_rows = calculate_quality_metrics(df)
 
@@ -160,115 +375,13 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             Label(quality_window, text=explanation_text, justify="left", wraplength=600).pack(pady=10)
 
             # Кнопка закрытия окна
-            ttk.Button(quality_window, text="Закрыть", command=quality_window.destroy).pack(pady=5)
+            ttk.Button(quality_window, text="Обработать без изменения данных", command=countinue_without_changes).pack(pady=5)
+            ttk.Button(quality_window, text="Улучшить качество данных и обработать", command=improve_data_quality).pack(pady=5)
 
         # Показать окно качества данных
         show_quality_window()
 
-        # Запрашиваем верхнюю границу объема у пользователя
-        upper_limit = get_upper_limit()
-        if upper_limit is None:  # Если пользователь отменил ввод
-            progress_var.set("Обработка формы 1 отменена.")
-            root.quit()
-            return
 
-        # Запрашиваем у пользователя столбец для аппроксимации
-        column_to_approximate = choose_column(df, root)
-        if not column_to_approximate:
-            raise ValueError("Столбец для аппроксимации не выбран.")
-
-        # Добавляем расчет объема в м3 для единицы товара
-        df['Объем единицы, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
-
-        # Находим уникальные значения в выбранном столбце
-        unique_values = df[column_to_approximate].unique()
-
-        # Создаем словарь для хранения средних объемов для каждой группы
-        avg_volume_by_group = {}
-
-        # Для каждой уникальной группы считаем средний объем
-        for value in unique_values:
-            group = df[df[column_to_approximate] == value]
-            avg_volume = group['Объем единицы, м3'].mean(skipna=True)
-            avg_volume_by_group[value] = avg_volume
-
-        # Если для группы не удалось посчитать среднее (все NaN), то используем среднее по всем товарам
-        global_mean = df['Объем единицы, м3'].mean(skipna=True)
-        for value, avg_volume in avg_volume_by_group.items():
-            if np.isnan(avg_volume):  # Если среднее по группе NaN
-                avg_volume_by_group[value] = global_mean  # Используем глобальное среднее
-
-        # Заполняем объемы в строках с NaN средним значением по соответствующей группе
-        df['Объем единицы после аппроксимации, м3'] = df.apply(
-            lambda row: row['Объем единицы, м3'] if pd.notnull(row['Объем единицы, м3'])
-            else avg_volume_by_group.get(row[column_to_approximate], global_mean), axis=1
-        )
-
-        # Метрики для анализа выбросов
-        Q1 = df['Объем единицы после аппроксимации, м3'].quantile(0.25)
-        Q3 = df['Объем единицы после аппроксимации, м3'].quantile(0.75)
-        IQR = Q3 - Q1
-        mean_approximated = df['Объем единицы после аппроксимации, м3'].mean()
-        median_approximated = df['Объем единицы после аппроксимации, м3'].median()
-
-        # Определяем значение для замены выбросов (Q6)
-        if upper_limit == 0:
-            Q6 = median_approximated if abs(
-                median_approximated - mean_approximated) / mean_approximated > 0.1 else mean_approximated
-        else:
-            Q6 = upper_limit
-
-        # Добавляем столбец для отметки выбросов
-        df['Является ли выбросом?'] = np.where(
-            (df['Объем единицы после аппроксимации, м3'] < (Q1 - 1.5 * IQR)) |
-            (df['Объем единицы после аппроксимации, м3'] > (Q3 + 1.5 * IQR)),
-            'Да', 'Нет'
-        )
-
-        # Заполняем выбросы значением Q6
-        df['Объем единицы после обработки выбросов, м3'] = np.where(
-            df['Является ли выбросом?'] == 'Да', Q6, df['Объем единицы после аппроксимации, м3']
-        )
-
-        # Сохраняем результаты вычислений и исходные данные в новый Excel файл
-        output_path = "Форма 1 обработанная.xlsx"
-        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-            # Сохраняем основной обработанный лист
-            df.to_excel(writer, index=False, sheet_name="Обработанные данные")
-
-            # Создаем лист для данных аппроксимации
-            df_approximation = pd.DataFrame({
-                "Уникальное значение": avg_volume_by_group.keys(),
-                "Средний объем, м3": avg_volume_by_group.values()
-            })
-            df_approximation.to_excel(writer, index=False, sheet_name="Данные аппроксимации")
-
-            # Получаем доступ к книге и листу для добавления метрик
-            workbook = writer.book
-            sheet = workbook["Обработанные данные"]
-
-            # Добавляем текстовые метки в ячейки P1-P6
-            sheet["P1"] = "Q1"
-            sheet["P2"] = "Q3"
-            sheet["P3"] = "IQR"
-            sheet["P4"] = "Среднее арифметическое после аппроксимации"
-            sheet["P5"] = "Медиана после аппроксимации"
-            sheet["P6"] = "Значение для замены"
-
-            # Вписываем значения в ячейки Q1-Q6
-            sheet["Q1"] = Q1  # Q1
-            sheet["Q2"] = Q3  # Q3
-            sheet["Q3"] = IQR  # IQR
-            sheet["Q4"] = mean_approximated  # Среднее арифметическое
-            sheet["Q5"] = median_approximated  # Медиана
-            sheet["Q6"] = Q6  # Значение для замены
-
-        # Устанавливаем статус завершения обработки
-        #progress_var.set("Обработка завершена.")
-        #root.quit()
-
-        # Завершение обработки формы
-        on_form1_done(output_path)
 
     except Exception as e:
         # Вывод ошибки при возникновении исключения
