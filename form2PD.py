@@ -135,7 +135,7 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     workbook = load_workbook(new_filepath)
     sheet_svod = workbook.create_sheet("СВОД")
     sheet_svod["A1"], sheet_svod["B1"], sheet_svod["C1"], sheet_svod["D1"] = \
-        "Приведенная дата", "Объем, м3", "Количество, строк", "Количество, штук"
+        "Приведенная дата", "Объем, м3", "Количество строк", "Количество штук"
 
     # Получаем уникальные приведенные даты и агрегацию данных по каждой дате
     unique_dates = sorted(df_form2['Приведенная дата'].dropna().unique())
@@ -143,7 +143,7 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
         sheet_svod[f"A{idx}"] = date
         date_data = df_form2[df_form2['Приведенная дата'] == date]
         sheet_svod[f"B{idx}"] = date_data['Итоговый объем, м3'].sum()
-        sheet_svod[f"C{idx}"] = date_data['Код товара'].nunique()
+        sheet_svod[f"C{idx}"] = date_data['Код товара'].count()
         sheet_svod[f"D{idx}"] = date_data['Количество с учетом единицы измерения'].sum()
 
         # Обновление прогресса
