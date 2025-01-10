@@ -1,7 +1,7 @@
-
 import pandas as pd
 import numpy as np
-from tkinter import Tk, Toplevel, Label, messagebox, ttk, Button, simpledialog
+from openpyxl import load_workbook
+from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk
 
 
 def choose_column(df, root):
@@ -16,7 +16,7 @@ def choose_column(df, root):
         choose_window.destroy()
 
     # Определение столбцов для выбора (исключая некоторые)
-    columns = [col for col in df.columns if col not in ["Код товара","Название товара", "Длина, см", "Ширина, см", "Высота, см"]]
+    columns = [col for col in df.columns if col not in ["Код товара", "Длина, см", "Ширина, см", "Высота, см"]]
 
     # Создаем новое окно для выбора столбца
     choose_window = Toplevel(root)
@@ -230,8 +230,47 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             df['Является ли выбросом?'] == 'Да', Q6, df['Объем единицы после аппроксимации, м3']
         )
 
-        # Вызываем callback-функцию
-        on_form1_done(df)
+        # Сохраняем результаты вычислений и исходные данные в новый Excel файл
+        output_path = "Форма 1 обработанная.xlsx"
+        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+            # Сохраняем основной обработанный лист
+            df.to_excel(writer, index=False, sheet_name="Обработанные данные")
+
+            # Создаем лист для данных аппроксимации
+            df_approximation = pd.DataFrame({
+                "Уникальное значение": avg_volume_by_group.keys(),
+                "Средний объем, м3": avg_volume_by_group.values()
+            })
+            df_approximation.to_excel(writer, index=False, sheet_name="Данные аппроксимации")
+
+            # Получаем доступ к книге и листу для добавления метрик
+            workbook = writer.book
+            sheet = workbook["Обработанные данные"]
+
+            # Добавляем текстовые метки в ячейки P1-P6
+            sheet["P1"] = "Q1"
+            sheet["P2"] = "Q3"
+            sheet["P3"] = "IQR"
+            sheet["P4"] = "Среднее арифметическое после аппроксимации"
+            sheet["P5"] = "Медиана после аппроксимации"
+            sheet["P6"] = "Значение для замены"
+
+            # Вписываем значения в ячейки Q1-Q6
+            sheet["Q1"] = Q1  # Q1
+            sheet["Q2"] = Q3  # Q3
+            sheet["Q3"] = IQR  # IQR
+            sheet["Q4"] = mean_approximated  # Среднее арифметическое
+            sheet["Q5"] = median_approximated  # Медиана
+            sheet["Q6"] = Q6  # Значение для замены
+
+        # Устанавливаем статус завершения обработки
+        #progress_var.set("Обработка завершена.")
+        #root.quit()
+
+        # Завершение обработки формы
+        on_form1_done(output_path)
+
     except Exception as e:
+        # Вывод ошибки при возникновении исключения
         messagebox.showerror("Ошибка", f"Произошла ошибка при обработке файла формы 1: {e}")
         progress_var.set("Ошибка обработки.")
