@@ -98,7 +98,7 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     # Создаем словарь для поиска объема единицы по коду товара из формы 1
     progress_var.set("Создание словаря объемов из формы 1")
     root.update()
-    volume_dict = df_form1.set_index('Код товара')['Объем единицы после обработки выбросов, м3'].to_dict()
+    volume_dict = df_form1.set_index('Код товара')['Объем единицы после аппроксимации, м3'].to_dict()
 
     # Добавляем столбцы для расчетов
     progress_var.set("Вычисление объемов и количеств")
@@ -106,9 +106,14 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     df_form2['Объем единицы, м3'] = df_form2['Код товара'].apply(
         lambda code: volume_dict.get(code, replacement_value)
     )
-    df_form2['Количество с учетом единицы измерения'] = df_form2.apply(
-        lambda row: row['Количество'] if row['ед. изм.'] == 'шт' else (row['Количество'] // 1 + 1), axis=1
-    )
+    if 'ед. изм.' in df_form2.columns:
+        df_form2['Количество с учетом единицы измерения'] = df_form2.apply(
+            lambda row: row['Количество'] if row['ед. изм.'] == 'шт' else (row['Количество'] // 1 + 1), axis=1
+        )
+    else:
+        df_form2['Количество с учетом единицы измерения'] = df_form2['Количество']
+
+
     df_form2['Итоговый объем, м3'] = df_form2['Объем единицы, м3'] * df_form2['Количество с учетом единицы измерения']
 
     # Приводим дату к нужному формату

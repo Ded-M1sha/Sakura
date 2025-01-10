@@ -128,8 +128,12 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
 
         # Определяем "Количество с учетом единицы измерения"
         quantity = row['Количество']
-        unit = row['ед. изм.']
-        adjusted_quantity = quantity if unit == 'шт' else (quantity // 1 + 1)
+        if row['ед. изм.'] not in df_form3:
+            adjusted_quantity = quantity
+        else:
+            unit = row['ед. изм.']
+            adjusted_quantity = quantity if unit == 'шт' else (quantity // 1 + 1)
+
 
         # Вычисляем "Итоговый объем, м3"
         final_volume = volume * adjusted_quantity
