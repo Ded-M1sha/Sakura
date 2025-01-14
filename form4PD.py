@@ -2,7 +2,23 @@ import pandas as pd
 import os
 from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Checkbutton, IntVar, Label, Button
-from openpyxl.utils import get_column_letter
+from datetime import datetime
+
+# Словарь перевода месяцев
+MONTHS_RU = {
+    "January": "январь", "February": "февраль", "March": "март",
+    "April": "апрель", "May": "май", "June": "июнь",
+    "July": "июль", "August": "август", "September": "сентябрь",
+    "October": "октябрь", "November": "ноябрь", "December": "декабрь"
+}
+
+def translate_month(date):
+    if pd.isnull(date):
+        return None
+    english_month = date.strftime("%B")
+    year = date.strftime("%Y")
+    return f"{MONTHS_RU.get(english_month, english_month)} {year}"
+
 
 # Словарь для количества дней в каждом месяце
 days_in_month = {
@@ -126,11 +142,7 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
 
         # Определяем "Количество с учетом единицы измерения"
         quantity = row['Количество']
-        if row['ед. изм.'] not in df_form4:
-            adjusted_quantity = quantity
-        else:
-            unit = row['ед. изм.']
-            adjusted_quantity = quantity if unit == 'шт' else (quantity // 1 + 1)
+        adjusted_quantity = quantity
 
         # Вычисляем "Итоговый объем, м3"
         final_volume = volume * adjusted_quantity

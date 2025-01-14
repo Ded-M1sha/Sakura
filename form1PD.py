@@ -286,7 +286,8 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                 df['Объем единицы после обработки выбросов, м3'] = np.where(
                     df['Является ли выбросом?'] == 'Да', Q6, df['Объем единицы после аппроксимации, м3']
                 )
-
+                #Удаление дубликатов
+                df.drop_duplicates(keep='first')
                 # Сохраняем результаты вычислений и исходные данные в новый Excel файл
                 output_path = "Форма 1 обработанная.xlsx"
                 with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
@@ -320,6 +321,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                     sheet["Q5"] = median_approximated  # Медиана
                     sheet["Q6"] = Q6  # Значение для замены
             on_form1_done(output_path)
+            show_quality_window()
 
         def show_quality_window():
             quality_data, total_rows = calculate_quality_metrics(df)
@@ -354,11 +356,13 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             tree.pack(fill="both", expand=True)
 
             # Оценка качества данных
+            duplicate_count = df.duplicated(keep=False).sum()
             total_issues = sum(int(row[1].split()[0]) for row in quality_data)
-            data_quality_score = 100 - (total_issues / (total_rows * len(df.columns)) * 100)
+            data_quality_score = 100 - ((total_issues / (total_rows * len(df.columns)) * 100)*(duplicate_count/total_rows))
             Label(
                 quality_window,
-                text=f"Оценка качества данных: {data_quality_score:.1f}/100",
+
+                text=f"Количество строк-дубликатов: {duplicate_count}\n\nОценка качества данных: {data_quality_score:.1f}/100",
                 font=("Arial", 12, "bold")
             ).pack(pady=5)
 
@@ -370,10 +374,11 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                 "Уникальный: 'Да', если все значения уникальны, 'Нет' — если есть повторения.\n"
                 "Выбросы: Количество строк с выбросами и их доля в процентах.\n"
                 "Отрицательные: Количество строк с отрицательными значениями и их доля в процентах.\n"
-                "Пробелы в конце: Количество строк с лишними отступами в конце значений и их доля в процентах."
+                "Пробелы в конце: Количество строк с лишними отступами в конце значений и их доля в процентах.\n"
+                "Количество строк-дубликатов: количество полностью одинаковых строк"
             )
             Label(quality_window, text=explanation_text, justify="left", wraplength=600).pack(pady=10)
-
+            print(df.duplicated(keep=False).sum())
             # Кнопка закрытия окна
             ttk.Button(quality_window, text="Обработать без изменения данных", command=countinue_without_changes).pack(pady=5)
             ttk.Button(quality_window, text="Улучшить качество данных и обработать", command=improve_data_quality).pack(pady=5)
