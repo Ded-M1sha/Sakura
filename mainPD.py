@@ -64,6 +64,7 @@ def main():
                 )
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось обработать форму {form_number}. Ошибка: {e}")
+            print(e)
             progress_var.set(f"Ошибка при обработке формы {form_number}.")
             root.update_idletasks()
     def create_summary():

@@ -3,6 +3,23 @@ import os
 from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Checkbutton, IntVar, Label, Button
 from openpyxl.utils import get_column_letter
+from datetime import datetime
+
+# Словарь перевода месяцев
+MONTHS_RU = {
+    "January": "январь", "February": "февраль", "March": "март",
+    "April": "апрель", "May": "май", "June": "июнь",
+    "July": "июль", "August": "август", "September": "сентябрь",
+    "October": "октябрь", "November": "ноябрь", "December": "декабрь"
+}
+
+def translate_month(date):
+    if pd.isnull(date):
+        return None
+    english_month = date.strftime("%B")
+    year = date.strftime("%Y")
+    return f"{MONTHS_RU.get(english_month, english_month)} {year}"
+
 
 # Словарь для количества дней в каждом месяце
 days_in_month = {
@@ -116,6 +133,8 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
     # Обработка строк формы 3
     progress_var.set("Обработка строк формы 3...")
     root.update()
+    # Приводим дату к английскому формату
+
     for idx, row in df_form3.iterrows():
         code = row['Код товара']
         date = pd.to_datetime(row['Дата'], errors='coerce', dayfirst=True)
@@ -124,13 +143,15 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
         volume = volume_dict.get(code, replacement_value)
 
         # Приводим дату к формату "01.MM.ГГГГ" или оставляем None, если дата некорректна
-        formatted_date = f"01.{date.month:02}.{date.year}" if pd.notnull(date) else None
+        #formatted_date = f"01.{date.month:02}.{date.year}" if pd.notnull(date) else None
+
+
 
         # Определяем "Количество с учетом единицы измерения"
         quantity = row['Количество']
         if row['ед. изм.'] in df_form3:
             unit = row['ед. изм.']
-            adjusted_quantity = quantity if unit == 'шт' else (quantity // 1 + 1)
+            adjusted_quantity = quantity if unit == 'шт' else (quantity // 1)
 
         else:
             adjusted_quantity = quantity
@@ -143,11 +164,20 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
         df_form3.at[idx, 'Объем единицы, м3'] = volume
         df_form3.at[idx, 'Количество с учетом единицы измерения'] = adjusted_quantity
         df_form3.at[idx, 'Итоговый объем, м3'] = final_volume
-        df_form3.at[idx, 'Приведенная дата'] = formatted_date
+
 
         # Обновление прогресса
         progress_var.set(f"Обработка данных: {idx + 1} / {len(df_form3)} строк")
         root.update()
+    print(type(date))
+
+    # Приведение столбца 'Дата' к формату datetime
+    df_form3['Дата'] = pd.to_datetime(df_form3['Дата'], errors='coerce', dayfirst=True)
+
+    # Создание колонки 'Приведенная дата' с отформатированной датой
+    df_form3['Приведенная дата'] = df_form3['Дата'].apply(
+        lambda x: x.strftime("%B %Y") if pd.notnull(x) else None
+    )
 
     # Сохранение промежуточного файла
     progress_var.set("Сохранение промежуточного файла с вычисленными значениями...")
@@ -175,29 +205,53 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
     sheet_svod["A1"], sheet_svod["B1"], sheet_svod["C1"], sheet_svod["D1"], sheet_svod["E1"], sheet_svod["F1"], sheet_svod["G1"], sheet_svod["H1"] = \
         "Приведенная дата", "Объем, м3", "Количество строк", "Количество штук", "Количество документов, штук", "Среднесуточное количество документов", "Среднесуточный объем, м3", "Среднесуточное количество товара, штук"
 
-    # Получаем уникальные приведенные даты
-    unique_dates = sorted(df_form3['Приведенная дата'].dropna().unique())
+    # Сортируем даты в хронологическом порядке
+    unique_dates = sorted(
+        df_form3['Приведенная дата'].dropna().unique(),
+        key=lambda x: datetime.strptime(x, "%B %Y")
+    )
+
+    # Перевод названий месяцев
+    def translate_month(date_str):
+        try:
+            english_month, year = date_str.split()
+            russian_month = MONTHS_RU.get(english_month, english_month)
+            return f"{russian_month} {year}"
+        except Exception as e:
+            print(f"Ошибка перевода месяца для {date_str}: {e}")
+            return date_str
+
+    translated_dates = {date: translate_month(date) for date in unique_dates}
+
+    # Обработка данных для листа "СВОД"
     for idx, date in enumerate(unique_dates, start=2):
-        sheet_svod[f"A{idx}"].value = date
+        sheet_svod[f"A{idx}"] = translated_dates[date]
+        date_data = df_form3[df_form3['Приведенная дата'] == date]
 
-        # Фильтруем данные по текущей дате
-        filtered_data = df_form3[df_form3['Приведенная дата'] == date]
+        try:
+            # Предполагаем, что формат даты: "January 2023"
+            month_str = date.split()[0]
+            month = datetime.strptime(month_str, "%B").month
+        except (ValueError, AttributeError) as e:
+            print(f"Ошибка обработки даты: {date}, ошибка: {e}")
+            continue  # Пропускаем некорректные даты
 
-        # Заполняем данные по каждому параметру
-        sheet_svod[f"B{idx}"] = filtered_data['Итоговый объем, м3'].sum()
-        sheet_svod[f"C{idx}"] = filtered_data.shape[0]  # Количество строк
-        sheet_svod[f"D{idx}"] = filtered_data['Количество с учетом единицы измерения'].sum()
-        document_count = filtered_data['Номер документа'].nunique()
-        sheet_svod[f"E{idx}"] = document_count  # Количество документов
+        # Заполняем данные
+        sheet_svod[f"B{idx}"] = date_data['Итоговый объем, м3'].sum()
+        sheet_svod[f"C{idx}"] = date_data.shape[0]  # Количество строк
+        sheet_svod[f"D{idx}"] = date_data['Количество с учетом единицы измерения'].sum()
+        document_count = date_data['Номер документа'].nunique()
+        sheet_svod[f"E{idx}"] = document_count
 
-        # Расчет среднесуточного количества документов
-        month = int(date[3:5])  # Получаем месяц из даты
-        daily_document_average = document_count / days_in_month[month]
-        sheet_svod[f"F{idx}"] = round(daily_document_average, 2)
-        daily_volume_avarage = sheet_svod[f"B{idx}"].value / days_in_month[month]
-        sheet_svod[f"G{idx}"] = round(daily_volume_avarage, 2)
-        daily_quantity_avarage = sheet_svod[f"D{idx}"].value / days_in_month[month]
-        sheet_svod[f"H{idx}"] = round(daily_quantity_avarage, 2)
+        if month is not None:
+            daily_document_average = document_count / days_in_month[month]
+            daily_volume_average = sheet_svod[f"B{idx}"].value / days_in_month[month]
+            daily_quantity_average = sheet_svod[f"D{idx}"].value / days_in_month[month]
+
+            sheet_svod[f"F{idx}"] = round(daily_document_average, 2)
+            sheet_svod[f"G{idx}"] = round(daily_volume_average, 2)
+            sheet_svod[f"H{idx}"] = round(daily_quantity_average, 2)
+
         # Обновление прогресса
         progress_var.set(f"Заполнение сводных данных: {idx - 1} / {len(unique_dates)} дат")
         root.update()
@@ -216,6 +270,7 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
         workbook.close()
     except Exception as e:
         messagebox.showerror("Ошибка сохранения", f"Не удалось сохранить файл. Ошибка: {e}")
+        print(e)
         return
 
     # Сообщение об успешной обработке
