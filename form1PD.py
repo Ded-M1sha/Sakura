@@ -48,6 +48,9 @@ def process_form1(filepath, progress_var, root, on_form1_done):
     try:
         # Загружаем данные из файла
         df = pd.read_excel(filepath)
+        df['Длина, см'] = pd.to_numeric(df['Длина, см'])
+        df['Ширина, см'] = pd.to_numeric(df['Ширина, см'])
+        df['Высота, см'] = pd.to_numeric(df['Высота, см'])
 
         # Вызываем окно "Качество данных" до аппроксимации данных
         def calculate_quality_metrics(df):
@@ -257,11 +260,12 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                     avg_volume_by_group[value] = avg_volume
 
                 for value, avg_volume in avg_volume_by_group.items():
-                    if np.isnan(avg_volume):
+                    if np.isnan(avg_volume) or avg_volume == 0:
                         avg_volume_by_group[value] = global_mean
 
                 df['Объем единицы после аппроксимации, м3'] = df.apply(
-                    lambda row: row['Объем единицы, м3'] if pd.notnull(row['Объем единицы, м3'])
+                    lambda row: row['Объем единицы, м3'] if pd.notnull(row['Объем единицы, м3']) and row[
+                        'Объем единицы, м3'] != 0
                     else avg_volume_by_group.get(row[column_to_approximate], global_mean), axis=1
                 )
 
@@ -286,42 +290,43 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                 df['Объем единицы после обработки выбросов, м3'] = np.where(
                     df['Является ли выбросом?'] == 'Да', Q6, df['Объем единицы после аппроксимации, м3']
                 )
-                #Удаление дубликатов
-                df.drop_duplicates(keep='first')
-                # Сохраняем результаты вычислений и исходные данные в новый Excel файл
-                output_path = "Форма 1 обработанная.xlsx"
-                with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-                    # Сохраняем основной обработанный лист
-                    df.to_excel(writer, index=False, sheet_name="Обработанные данные")
+            if 'Объем единицы после аппроксимации, м3' in df.columns: df['Объем единицы итоговый, м3'] = df['Объем единицы после аппроксимации, м3']
+            else:
+                if 'Объем единицы после обработки выбросов, м3' in df.columns: df['Объем единицы итоговый, м3'] =  df['Объем единицы после обработки выбросов, м3']
+                else: df['Объем единицы итоговый, м3'] = df['Объем единицы, м3']
+            # Сохраняем результаты вычислений и исходные данные в новый Excel файл
+            output_path = "Форма 1 обработанная.xlsx"
+            with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+                # Сохраняем основной обработанный лист
+                df.to_excel(writer, index=False, sheet_name="Обработанные данные")
 
-                    # Создаем лист для данных аппроксимации
-                    df_approximation = pd.DataFrame({
-                        "Уникальное значение": avg_volume_by_group.keys(),
-                        "Средний объем, м3": avg_volume_by_group.values()
-                    })
-                    df_approximation.to_excel(writer, index=False, sheet_name="Данные аппроксимации")
+                # Создаем лист для данных аппроксимации
+                df_approximation = pd.DataFrame({
+                    "Уникальное значение": avg_volume_by_group.keys(),
+                    "Средний объем, м3": avg_volume_by_group.values()
+                })
+                df_approximation.to_excel(writer, index=False, sheet_name="Данные аппроксимации")
 
-                    # Получаем доступ к книге и листу для добавления метрик
-                    workbook = writer.book
-                    sheet = workbook["Обработанные данные"]
+                # Получаем доступ к книге и листу для добавления метрик
+                workbook = writer.book
+                sheet = workbook["Обработанные данные"]
 
-                    # Добавляем текстовые метки в ячейки P1-P6
-                    sheet["P1"] = "Q1"
-                    sheet["P2"] = "Q3"
-                    sheet["P3"] = "IQR"
-                    sheet["P4"] = "Среднее арифметическое после аппроксимации"
-                    sheet["P5"] = "Медиана после аппроксимации"
-                    sheet["P6"] = "Значение для замены"
+                # Добавляем текстовые метки в ячейки P1-P6
+                sheet["U1"] = "Q1"
+                sheet["U2"] = "Q3"
+                sheet["U3"] = "IQR"
+                sheet["U4"] = "Среднее арифметическое после аппроксимации"
+                sheet["U5"] = "Медиана после аппроксимации"
+                sheet["U6"] = "Значение для замены"
 
-                    # Вписываем значения в ячейки Q1-Q6
-                    sheet["Q1"] = Q1  # Q1
-                    sheet["Q2"] = Q3  # Q3
-                    sheet["Q3"] = IQR  # IQR
-                    sheet["Q4"] = mean_approximated  # Среднее арифметическое
-                    sheet["Q5"] = median_approximated  # Медиана
-                    sheet["Q6"] = Q6  # Значение для замены
+                # Вписываем значения в ячейки Q1-Q6
+                sheet["V1"] = Q1  # Q1
+                sheet["V2"] = Q3  # Q3
+                sheet["V3"] = IQR  # IQR
+                sheet["V4"] = mean_approximated  # Среднее арифметическое
+                sheet["V5"] = median_approximated  # Медиана
+                sheet["V6"] = Q6  # Значение для замены
             on_form1_done(output_path)
-            show_quality_window()
 
         def show_quality_window():
             quality_data, total_rows = calculate_quality_metrics(df)
@@ -356,29 +361,26 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             tree.pack(fill="both", expand=True)
 
             # Оценка качества данных
-            duplicate_count = df.duplicated(keep=False).sum()
             total_issues = sum(int(row[1].split()[0]) for row in quality_data)
-            data_quality_score = 100 - ((total_issues / (total_rows * len(df.columns)) * 100)*(duplicate_count/total_rows))
+            data_quality_score = 100 - (total_issues / (total_rows * len(df.columns)) * 100)
             Label(
                 quality_window,
-
-                text=f"Количество строк-дубликатов: {duplicate_count}\n\nОценка качества данных: {data_quality_score:.1f}/100",
+                text=f"Оценка качества данных: {data_quality_score:.1f}/100",
                 font=("Arial", 12, "bold")
             ).pack(pady=5)
 
             # Пояснение под таблицей
             explanation_text = (
-                " Пустые значения: Количество строк с пустыми значениями и их доля в процентах.\n"
+                "Пустые значения: Количество строк с пустыми значениями и их доля в процентах.\n"
                 "Нули: Количество строк с нулевыми значениями и их доля в процентах.\n"
                 "Константа: 'Да', если все значения столбца одинаковы, 'Нет' — если есть хотя бы два уникальных значения.\n"
                 "Уникальный: 'Да', если все значения уникальны, 'Нет' — если есть повторения.\n"
                 "Выбросы: Количество строк с выбросами и их доля в процентах.\n"
                 "Отрицательные: Количество строк с отрицательными значениями и их доля в процентах.\n"
-                "Пробелы в конце: Количество строк с лишними отступами в конце значений и их доля в процентах.\n"
-                "Количество строк-дубликатов: количество полностью одинаковых строк"
+                "Пробелы в конце: Количество строк с лишними отступами в конце значений и их доля в процентах."
             )
             Label(quality_window, text=explanation_text, justify="left", wraplength=600).pack(pady=10)
-            print(df.duplicated(keep=False).sum())
+
             # Кнопка закрытия окна
             ttk.Button(quality_window, text="Обработать без изменения данных", command=countinue_without_changes).pack(pady=5)
             ttk.Button(quality_window, text="Улучшить качество данных и обработать", command=improve_data_quality).pack(pady=5)

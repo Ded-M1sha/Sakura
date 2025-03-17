@@ -109,16 +109,16 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
     sheet_form1 = workbook_form1.active
 
     # Сохраняем значение ячейки Q6 как переменную
-    replacement_value = sheet_form1["Q6"].value
+    replacement_value = sheet_form1["V6"].value
 
     # Проверяем, что значение не пустое
     if replacement_value is None:
-        messagebox.showerror("Ошибка", "Отсутствует значение для замены в ячейке Q6 формы 1.")
+        messagebox.showerror("Ошибка", "Отсутствует значение для замены в ячейке V6 формы 1.")
         root.quit()
         return
 
     # Создаем словарь для поиска объема единицы по коду товара
-    volume_dict = df_form1.set_index('Код товара')['Объем единицы после обработки выбросов, м3'].to_dict()
+    volume_dict = df_form1.set_index('Код товара')['Объем единицы итоговый, м3'].to_dict()
 
     # Сообщаем пользователю о добавлении новых столбцов
     progress_var.set("Добавление необходимых столбцов в форму 3...")
@@ -148,21 +148,22 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
 
 
         # Определяем "Количество с учетом единицы измерения"
-        quantity = row['Количество']
-        if row['ед. изм.'] in df_form3:
-            unit = row['ед. изм.']
-            adjusted_quantity = quantity if unit == 'шт' else (quantity // 1)
+        # quantity = row['Количество']
+        # if row['ед. изм.'] in df_form3:
+        #     unit = row['ед. изм.']
+        #     adjusted_quantity = quantity if unit == 'шт' else (quantity // 1)
+        #
+        # else:
+        #     adjusted_quantity = quantity
 
-        else:
-            adjusted_quantity = quantity
 
 
         # Вычисляем "Итоговый объем, м3"
-        final_volume = volume * adjusted_quantity
+        final_volume = volume * row['Количество']
 
         # Записываем результаты в DataFrame
         df_form3.at[idx, 'Объем единицы, м3'] = volume
-        df_form3.at[idx, 'Количество с учетом единицы измерения'] = adjusted_quantity
+
         df_form3.at[idx, 'Итоговый объем, м3'] = final_volume
 
 
@@ -239,7 +240,7 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
         # Заполняем данные
         sheet_svod[f"B{idx}"] = date_data['Итоговый объем, м3'].sum()
         sheet_svod[f"C{idx}"] = date_data.shape[0]  # Количество строк
-        sheet_svod[f"D{idx}"] = date_data['Количество с учетом единицы измерения'].sum()
+        sheet_svod[f"D{idx}"] = date_data['Количество'].sum()
         document_count = date_data['Номер документа'].nunique()
         sheet_svod[f"E{idx}"] = document_count
 

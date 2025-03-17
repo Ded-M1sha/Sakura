@@ -1,8 +1,3 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-from openpyxl import load_workbook
-import re  # Для извлечения числа из строки
-
 import openpyxl
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -77,6 +72,14 @@ def plot_data(dates, values, table_titles, file_path):
             plt.figure(figsize=(10, 6))
             plt.plot(date_data, value_data[column], marker='o', linestyle='-', color='#e80b16', label=column)
 
+            # Находим индекс максимального значения в текущем столбце
+            max_value_index = value_data[column].idxmax()
+            max_date = date_data[max_value_index]
+            max_value = value_data[column].max()
+
+            # Добавляем точку с максимальным значением
+            plt.scatter(max_date, max_value, color='black', label='Максимум', s=100, zorder=5)
+
             plt.title(f'{table_title}. {column}', fontsize=14, fontweight='bold', family='Arial')
             plt.xlabel('Дата')
             plt.ylabel('Значение')
@@ -85,8 +88,12 @@ def plot_data(dates, values, table_titles, file_path):
             plt.legend()
             plt.tight_layout()
 
+            # Сохраняем график
             output_path = os.path.join(output_dir, f'{table_title}_{column}.png')
             plt.savefig(output_path, format='png', dpi=300)
-            plt.show()
+            plt.close()  # Закрываем фигуру
+
+
+
 
 

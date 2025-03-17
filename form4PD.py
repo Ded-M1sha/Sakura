@@ -13,6 +13,7 @@ MONTHS_RU = {
     "October": "октябрь", "November": "ноябрь", "December": "декабрь"
 }
 
+
 def translate_month(date):
     if pd.isnull(date):
         return None
@@ -26,6 +27,8 @@ days_in_month = {
     1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31,
     8: 31, 9: 30, 10: 31, 11: 30, 12: 31
 }
+
+
 def choose_filter_columns_and_values(df, root):
     """
     Функция для выбора пользователем столбцов и уникальных значений фильтрации.
@@ -82,8 +85,9 @@ def choose_filter_columns_and_values(df, root):
 
     return selected_filters
 
+
 def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
-    new_filepath = os.path.join(os.path.dirname(filepath), "Форма 4 обработанная.xlsx")
+    new_filepath = os.path.join(os.path.dirname(filepath), "Форма 4_обработанная.xlsx")
 
     try:
         # Сообщаем пользователю о загрузке файлов
@@ -109,16 +113,16 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
     sheet_form1 = workbook_form1.active
 
     # Сохраняем значение ячейки Q6 как переменную
-    replacement_value = sheet_form1["Q6"].value
+    replacement_value = sheet_form1["V6"].value
 
     # Проверяем, что значение не пустое
     if replacement_value is None:
-        messagebox.showerror("Ошибка", "Отсутствует значение для замены в ячейке Q6 формы 1.")
+        messagebox.showerror("Ошибка", "Отсутствует значение для замены в ячейке V6 формы 1.")
         root.quit()
         return
 
     # Создаем словарь для поиска объема единицы по коду товара
-    volume_dict = df_form1.set_index('Код товара')['Объем единицы после обработки выбросов, м3'].to_dict()
+    volume_dict = df_form1.set_index('Код товара')['Объем единицы итоговый, м3'].to_dict()
 
     # Сообщаем пользователю о добавлении новых столбцов
     progress_var.set("Добавление необходимых столбцов в форму 4...")
@@ -143,13 +147,10 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
         volume = volume_dict.get(code, replacement_value)
 
         # Приводим дату к формату "01.MM.ГГГГ" или оставляем None, если дата некорректна
-        #formatted_date = f"01.{date.month:02}.{date.year}" if pd.notnull(date) else None
-
-
+        # formatted_date = f"01.{date.month:02}.{date.year}" if pd.notnull(date) else None
 
         # Определяем "Количество с учетом единицы измерения"
         adjusted_quantity = row['Количество']
-
 
         # Вычисляем "Итоговый объем, м3"
         final_volume = volume * adjusted_quantity
@@ -159,11 +160,9 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
         df_form4.at[idx, 'Количество с учетом единицы измерения'] = adjusted_quantity
         df_form4.at[idx, 'Итоговый объем, м3'] = final_volume
 
-
         # Обновление прогресса
         progress_var.set(f"Обработка данных: {idx + 1} / {len(df_form4)} строк")
         root.update()
-    
 
     # Приведение столбца 'Дата' к формату datetime
     df_form4['Дата'] = pd.to_datetime(df_form4['Дата'], errors='coerce', dayfirst=True)
@@ -188,15 +187,14 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
         for col, values in filter_columns_values.items():
             df_form4 = df_form4[df_form4[col].isin(values)]
 
-
-
     # Создание листа "СВОД" и заполнение данными
     progress_var.set("Создание листа 'СВОД'...")
     root.update()
 
     workbook = load_workbook(new_filepath)
     sheet_svod = workbook.create_sheet("СВОД")
-    sheet_svod["A1"], sheet_svod["B1"], sheet_svod["C1"], sheet_svod["D1"], sheet_svod["E1"], sheet_svod["F1"], sheet_svod["G1"], sheet_svod["H1"] = \
+    sheet_svod["A1"], sheet_svod["B1"], sheet_svod["C1"], sheet_svod["D1"], sheet_svod["E1"], sheet_svod["F1"], \
+    sheet_svod["G1"], sheet_svod["H1"] = \
         "Приведенная дата", "Объем, м3", "Количество строк", "Количество штук", "Количество документов, штук", "Среднесуточное количество документов", "Среднесуточный объем, м3", "Среднесуточное количество товара, штук"
 
     # Сортируем даты в хронологическом порядке

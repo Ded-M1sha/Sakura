@@ -80,10 +80,10 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
         root.update()
         workbook_form1 = load_workbook(form1_filepath, data_only=True)
         sheet_form1 = workbook_form1.active
-        replacement_value = sheet_form1["Q6"].value
+        replacement_value = sheet_form1["V6"].value
 
         if replacement_value is None:
-            raise ValueError("Ячейка Q6 в форме 1 не содержит значение для замены.")
+            raise ValueError("Ячейка V6 в форме 1 не содержит значение для замены.")
     except Exception as e:
         messagebox.showerror("Ошибка", f"Не удалось загрузить файлы или прочитать значение для замены. Ошибка: {e}")
         root.quit()
@@ -97,7 +97,7 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     df_form1 = pd.read_excel(form1_filepath)
     progress_var.set("Создание словаря объемов из формы 1")
     root.update()
-    volume_dict = df_form1.set_index('Код товара')['Объем единицы после аппроксимации, м3'].to_dict()
+    volume_dict = df_form1.set_index('Код товара')['Объем единицы итоговый, м3'].to_dict()
 
     progress_var.set("Вычисление объемов и количеств")
     root.update()
