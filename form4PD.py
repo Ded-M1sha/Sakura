@@ -163,7 +163,7 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
         # Обновление прогресса
         progress_var.set(f"Обработка данных: {idx + 1} / {len(df_form4)} строк")
         root.update()
-    print(type(date))
+    
 
     # Приведение столбца 'Дата' к формату datetime
     df_form4['Дата'] = pd.to_datetime(df_form4['Дата'], errors='coerce', dayfirst=True)

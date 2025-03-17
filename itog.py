@@ -67,7 +67,7 @@ def visualize_summary(file_path):
     start_row = 1
 
     # Чтение данных
-    dates, values, table_titles = read_data_from_excel(file_path, sheet_name, date_col, start_row, None)
+    dates, values, table_titles = read_data_from_excel(file_path, sheet_name, date_col, start_row)
 
     # Построение графиков
     plot_data(dates, values, table_titles, file_path)
