@@ -54,7 +54,7 @@ def create_summary_from_memory(forms_data, output_filepath):
     messagebox.showinfo("Успешно", "Итоговый файл успешно создан!")
 
     # Спрашиваем у пользователя, хочет ли он построить графики
-    if messagebox.askyesno("Графики", "Хотите ли просмотреть графики показателей итоговой таблицы?"):
+    if messagebox.askyesno("Графики", "Хотите создать графики показателей итоговой таблицы?"):
         visualize_summary(output_filepath)
 
 

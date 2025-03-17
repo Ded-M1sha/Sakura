@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 import re
+import numpy as np
 from tkinter import messagebox
 
 
@@ -64,36 +65,57 @@ def extract_table_title(title_text):
     return "Неизвестная форма"
 
 
+
 def plot_data(dates, values, table_titles, file_path):
     output_dir = os.path.dirname(file_path)
 
     for date_data, value_data, table_title in zip(dates, values, table_titles):
         for column in value_data.columns:
-            plt.figure(figsize=(10, 6))
-            plt.plot(date_data, value_data[column], marker='o', linestyle='-', color='#e80b16', label=column)
+            plt.figure(figsize=(12, 7))  # Увеличиваем размер графика
 
-            # Находим индекс максимального значения в текущем столбце
-            max_value_index = value_data[column].idxmax()
-            max_date = date_data[max_value_index]
-            max_value = value_data[column].max()
+            # Создаем числовые индексы для строковых дат
+            x_indices = np.arange(len(date_data))  # Числовые индексы (0, 1, 2, ...)
 
-            # Добавляем точку с максимальным значением
-            plt.scatter(max_date, max_value, color='black', label='Максимум', s=100, zorder=5)
+            # Фильтрация значений дат, чтобы оставить только те, которые заканчиваются на "20"
+            filtered_dates = [date for date in date_data if date[-4: -2] == '20']
+            filtered_indices = [i for i, date in enumerate(date_data) if date[-4: -2] == '20']
+            filtered_values = value_data.iloc[filtered_indices]
 
-            plt.title(f'{table_title}. {column}', fontsize=14, fontweight='bold', family='Arial')
-            plt.xlabel('Дата')
-            plt.ylabel('Значение')
-            plt.xticks(rotation=45)
-            plt.grid(True)
-            plt.legend()
-            plt.tight_layout()
+            # Если фильтрация вернула пустой список, то продолжаем с пустым графиком
+            if filtered_dates:
+                plt.plot(filtered_indices, filtered_values[column], marker='o', linestyle='-', color='#e80b16', label=column)
 
-            # Сохраняем график
-            output_path = os.path.join(output_dir, f'{table_title}_{column}.png')
-            plt.savefig(output_path, format='png', dpi=300)
-            plt.close()  # Закрываем фигуру
+                # Добавляем метки данных на точки графика
+                for x, y in zip(filtered_indices, filtered_values[column]):
+                    if isinstance(y, (int, float)) and not np.isnan(y):  # Проверяем, что значение числовое
+                        plt.annotate(f'{y:.0f}', (x, y), textcoords="offset points", xytext=(0, 5),
+                                     ha='center', fontsize=9, color='black',
+                                     bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black", lw=0.3))
 
+                # Находим индекс максимального значения
+                if filtered_values[column].dropna().empty:  # Если столбец пуст, пропускаем
+                    continue
 
+                max_value_index = filtered_values[column].idxmax()
+                max_x_index = filtered_indices[max_value_index]
+                max_value = filtered_values[column].max()
 
+                # Добавляем точку с максимальным значением
+                plt.scatter(max_x_index, max_value, color='black', label=f'Эталонное значение: {max_value:.0f}', s=100, zorder=5)
+
+                plt.title(f'{table_title}. {column}', fontsize=14, fontweight='bold', family='Calibri')
+                plt.xlabel('Дата')
+                plt.ylabel('Значение')
+                plt.xticks(filtered_indices, filtered_dates, rotation=45)  # Устанавливаем подписи для оси X
+                plt.grid(True)
+                plt.legend()
+
+                # Явно настраиваем отступы
+                plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.2)
+
+                # Сохраняем график
+                output_path = os.path.join(output_dir, f'{table_title}_{column}.png')
+                plt.savefig(output_path, format='png', dpi=300)
+                plt.close()  # Закрываем фигуру
 
 
