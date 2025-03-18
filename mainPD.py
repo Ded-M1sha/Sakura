@@ -77,11 +77,12 @@ def main():
             }
             output_file = filedialog.asksaveasfilename(filetypes=[("Excel Files", "*.xlsx")], defaultextension=".xlsx")
             if output_file:
-                create_summary_from_memory(forms_data, output_file)
+                create_summary_from_memory(forms_data, output_file, filepath_var5)
                 messagebox.showinfo("Успешно", f"Итоговый файл сохранен по пути: {output_file}")
                 progress_var.set("Итоговый файл создан успешно.")
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось создать итоговый файл. Ошибка: {e}")
+            print(e)
             progress_var.set("Ошибка при создании итогового файла.")
     # Инициализация GUI
     root = tk.Tk()
@@ -93,24 +94,27 @@ def main():
     filepath_var2 = tk.StringVar()
     filepath_var3 = tk.StringVar()
     filepath_var4 = tk.StringVar()
+    filepath_var5 = tk.StringVar()
     # Кнопки для выбора файлов
     tk.Button(root, text="Форма 1", command=lambda: choose_file(filepath_var1)).grid(row=1, column=0)
-    tk.Entry(root, textvariable=filepath_var1, width=50).grid(row=1, column=1)
+    tk.Entry(root, textvariable=filepath_var1, width=70).grid(row=1, column=1)
     tk.Button(root, text="Форма 2", command=lambda: choose_file(filepath_var2)).grid(row=2, column=0)
-    tk.Entry(root, textvariable=filepath_var2, width=50).grid(row=2, column=1)
+    tk.Entry(root, textvariable=filepath_var2, width=70).grid(row=2, column=1)
     tk.Button(root, text="Форма 3", command=lambda: choose_file(filepath_var3)).grid(row=3, column=0)
-    tk.Entry(root, textvariable=filepath_var3, width=50).grid(row=3, column=1)
+    tk.Entry(root, textvariable=filepath_var3, width=70).grid(row=3, column=1)
     tk.Button(root, text="Форма 4", command=lambda: choose_file(filepath_var4)).grid(row=4, column=0)
-    tk.Entry(root, textvariable=filepath_var4, width=50).grid(row=4, column=1)
+    tk.Entry(root, textvariable=filepath_var4, width=70).grid(row=4, column=1)
+    tk.Button(root, text="Форма 5", command=lambda: choose_file(filepath_var5)).grid(row=5, column=0)
+    tk.Entry(root, textvariable=filepath_var5, width=70).grid(row=5, column=1)
     # Кнопки обработки форм
-    tk.Button(root, text="Обработать форму 1", command=lambda: process_form(1)).grid(row=5, column=0)
-    tk.Button(root, text="Обработать форму 2", command=lambda: process_form(2)).grid(row=6, column=0)
-    tk.Button(root, text="Обработать форму 3", command=lambda: process_form(3)).grid(row=7, column=0)
-    tk.Button(root, text="Обработать форму 4", command=lambda: process_form(4)).grid(row=8, column=0)
+    tk.Button(root, text="Обработать форму 1", command=lambda: process_form(1)).grid(row=6, column=0)
+    tk.Button(root, text="Обработать форму 2", command=lambda: process_form(2)).grid(row=7, column=0)
+    tk.Button(root, text="Обработать форму 3", command=lambda: process_form(3)).grid(row=8, column=0)
+    tk.Button(root, text="Обработать форму 4", command=lambda: process_form(4)).grid(row=9, column=0)
     # Кнопка для создания итогового файла
-    tk.Button(root, text="Создать итоговый файл", command=create_summary).grid(row=9, column=0, columnspan=2)
+    tk.Button(root, text="Создать итоговый файл", command=create_summary).grid(row=10, column=0, columnspan=2)
     # Прогресс-бар
-    tk.Label(root, textvariable=progress_var).grid(row=10, column=0, columnspan=2)
+    tk.Label(root, textvariable=progress_var).grid(row=11, column=0, columnspan=2)
     progress_var.set("Готово к работе.")
     root.mainloop()
 
