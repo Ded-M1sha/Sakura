@@ -106,7 +106,7 @@ def main():
     ctk.CTkButton(button_frame, text="Обработать форму 4", command=lambda: process_form(4)).pack(side="left", padx=5)
 
     # Кнопка создания итогового файла
-    summary_button = ctk.CTkButton(root, text="Создать итоговый файл", command=create_summary, fg_color="green")
+    summary_button = ctk.CTkButton(root, text="Создать итоговый файл", command=create_summary, fg_color="blue")
     summary_button.pack(pady=10)
 
     # Прогресс-бар
@@ -115,7 +115,7 @@ def main():
     progress_bar.set(0)  # Начальное значение
 
     # Метка состояния
-    status_label = ctk.CTkLabel(root, textvariable=progress_var, font=("Arial", 12))
+    status_label = ctk.CTkLabel(root, textvariable=progress_var, font=("roboto", 12))
     status_label.pack(pady=5)
 
     root.mainloop()

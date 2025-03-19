@@ -3,6 +3,8 @@ import os
 from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Checkbutton, IntVar, Label, Button
 from datetime import datetime
+from form1PD import show_error
+import customtkinter as ctk
 
 # Словарь перевода месяцев
 MONTHS_RU = {
@@ -36,29 +38,28 @@ def choose_filter_columns_and_values(df, root):
             selected_filters[col] = [val for val, var in value_vars.items() if var.get() == 1]
             value_window.destroy()
 
-        value_window = Toplevel(root)
+        value_window = ctk.CTkToplevel(root)
         value_window.title(f"Выбор значений для {col}")
-        Label(value_window, text=f"Выберите значения для фильтрации столбца '{col}':").pack()
+        ctk.CTkLabel(value_window, text=f"Выберите значения для фильтрации столбца '{col}':").pack()
 
         for val, var in value_vars.items():
-            Checkbutton(value_window, text=val, variable=var).pack(anchor="w")
+            ctk.CTkCheckBox(value_window, text=val, variable=var).pack(anchor="w")
 
-        Button(value_window, text="Применить", command=apply_values).pack()
+        ctk.CTkButton(value_window, text="Применить", command=apply_values).pack()
         root.wait_window(value_window)
-
     selected_columns = []
-    column_window = Toplevel(root)
+    column_window = ctk.CTkToplevel(root)
     column_window.title("Выбор столбцов для фильтрации")
-    Label(column_window, text="Выберите столбцы для фильтрации данных:").pack()
+    ctk.CTkLabel(column_window, text="Выберите столбцы для фильтрации данных:").pack()
 
     column_vars = {}
     columns = [col for col in df.columns if col not in ["Код товара", "Длина, см", "Ширина, см", "Высота, см"]]
 
     for col in columns:
         column_vars[col] = IntVar()
-        Checkbutton(column_window, text=col, variable=column_vars[col]).pack(anchor="w")
+        ctk.CTkCheckBox(column_window, text=col, variable=column_vars[col]).pack(anchor="w")
 
-    Button(column_window, text="Далее", command=select_columns).pack()
+    ctk.CTkButton(column_window, text="Далее", command=select_columns).pack()
     root.wait_window(column_window)
 
     unique_values = {col: df[col].dropna().unique() for col in selected_columns}
@@ -71,30 +72,31 @@ def choose_filter_columns_and_values(df, root):
 def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     new_filepath = os.path.join(os.path.dirname(filepath), "Форма 2_обработанная.xlsx")
 
-    try:
-        progress_var.set("Загрузка данных формы 2")
-        root.update()
-        df_form2 = pd.read_excel(filepath)
 
-        progress_var.set("Загрузка данных формы 1")
-        root.update()
-        workbook_form1 = load_workbook(form1_filepath, data_only=True)
-        sheet_form1 = workbook_form1.active
-        replacement_value = sheet_form1["V6"].value
+    progress_var.set("Загрузка данных формы 2")
+    root.update()
+    df_form2 = pd.read_excel(filepath)
 
-        if replacement_value is None:
-            raise ValueError("Ячейка V6 в форме 1 не содержит значение для замены.")
-    except Exception as e:
-        messagebox.showerror("Ошибка", f"Не удалось загрузить файлы или прочитать значение для замены. Ошибка: {e}")
-        root.quit()
-        return
-
-    if 'Код товара' not in df_form2.columns:
-        messagebox.showerror("Ошибка", "Отсутствует столбец 'Код товара' в форме 2.")
-        root.quit()
-        return
+    progress_var.set("Загрузка данных формы 1")
+    root.update()
+    workbook_form1 = load_workbook(form1_filepath, data_only=True)
+    sheet_form1 = workbook_form1.active
 
     df_form1 = pd.read_excel(form1_filepath)
+
+    replacement_value = sheet_form1["V6"].value
+
+    if replacement_value is None:
+        replacement_value = df_form1['Объем единицы итоговый, м3'].median()
+        show_error("Предупреждение","Недостающие в справочнике значения будут заменены на среднее")
+
+
+    if 'Код товара' not in df_form2.columns:
+        show_error("Ошибка", "Отсутствует столбец 'Код товара' в форме 2. Обработка остановлена")
+        root.quit()
+        return
+
+
     progress_var.set("Создание словаря объемов из формы 1")
     root.update()
     volume_dict = df_form1.set_index('Код товара')['Объем единицы итоговый, м3'].to_dict()
@@ -171,5 +173,5 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
         messagebox.showerror("Ошибка сохранения", f"Не удалось сохранить файл. Ошибка: {e}")
         return
 
-    messagebox.showinfo("Успешно", f"Файл формы 2 успешно обработан и сохранен по пути: {new_filepath}")
+    show_error("Успешно", f"Файл формы 2 успешно обработан и сохранен по пути: {new_filepath}")
     on_form2_done(new_filepath)

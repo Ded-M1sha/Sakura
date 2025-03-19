@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk, BooleanVar, Checkbutton
-
+import customtkinter as ctk
 
 def choose_column(df, root):
     """
@@ -19,29 +19,61 @@ def choose_column(df, root):
     columns = [col for col in df.columns if col not in ["Код товара", "Длина, см", "Ширина, см", "Высота, см"]]
 
     # Создаем новое окно для выбора столбца
-    choose_window = Toplevel(root)
+    choose_window = ctk.CTkToplevel(root)
     choose_window.title("Выбор столбца для аппроксимации")
-    Label(choose_window, text="Выберите столбец для аппроксимации:").pack()
+    ctk.CTkLabel(choose_window, text="Выберите столбец для аппроксимации:").pack(pady=10)
 
     # Добавляем кнопки для каждого столбца
     for col in columns:
-        Button(choose_window, text=col, command=lambda c=col: select_column(c)).pack()
+        ctk.CTkButton(choose_window, text=col, command=lambda c=col: select_column(c)).pack(pady=10)
 
     # Ожидаем закрытия окна
     root.wait_window(choose_window)
     return selected_column["name"]
 
-
-def get_upper_limit():
+def get_upper_limit(root):
     """
     Функция для запроса верхней границы объема у пользователя.
     Возвращает введенное значение или None, если пользователь отменил ввод.
     """
-    upper_limit = simpledialog.askfloat("Ввод верхней границы объема",
-                                        "Введите верхнюю границу объема (введите 0 для автоматического расчета):")
-    if upper_limit is None:
-        return None  # Если пользователь отменил ввод
-    return upper_limit
+    choose_window = ctk.CTkToplevel(root)
+    choose_window.title("Ввод верхней границы объема")
+    choose_window.geometry("600x200")
+
+    label = ctk.CTkLabel(choose_window, text="Введите верхнюю границу объема (введите 0 для автоматического расчета):")
+    label.pack(pady=10)
+
+    entry = ctk.CTkEntry(choose_window, width=200)
+    entry.pack(pady=5)
+
+    upper_limit = {"value": None}
+
+    def on_submit():
+        """Сохранение введенного значения и закрытие окна"""
+        try:
+            upper_limit["value"] = float(entry.get())
+        except ValueError:
+            upper_limit["value"] = None  # Если введены некорректные данные
+        choose_window.destroy()
+
+    def on_cancel():
+        """Закрытие окна без сохранения"""
+        upper_limit["value"] = None
+        choose_window.destroy()
+
+    button_frame = ctk.CTkFrame(choose_window)
+    button_frame.pack(pady=10)
+
+    button_ok = ctk.CTkButton(button_frame, text="ОК", command=on_submit)
+    button_ok.pack(side="left", padx=5)
+
+    button_cancel = ctk.CTkButton(button_frame, text="Отмена", command=on_cancel)
+    button_cancel.pack(side="left", padx=5)
+
+    root.wait_window(choose_window)
+
+    return upper_limit["value"]
+
 
 
 def process_form1(filepath, progress_var, root, on_form1_done):
@@ -111,7 +143,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
 
         def countinue_without_changes():
             # Добавляем расчет объема в м3 для единицы товара
-            df['Объем единицы, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
+            df['Объем единицы итоговый, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
 
 
             # Сохраняем результаты вычислений и исходные данные в новый Excel файл
@@ -129,7 +161,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             пользователем столбцов и проблем для обработки.
             """
             # Запрашиваем верхнюю границу объема у пользователя
-            upper_limit = get_upper_limit()
+            upper_limit = get_upper_limit(root)
             if upper_limit is None:  # Если пользователь отменил ввод
                 progress_var.set("Обработка формы 1 отменена.")
                 root.quit()
@@ -158,39 +190,39 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                     selection_window.destroy()
 
                 # Создаем окно
-                selection_window = Toplevel(root)
+                selection_window = ctk.CTkToplevel(root)
                 selection_window.title("Выбор обработки качества данных")
 
                 # Инструкции
-                Label(selection_window, text="Выберите столбцы для обработки:", font=("Arial", 12)).pack(pady=5)
+                ctk.CTkLabel(selection_window, text="Выберите столбцы для обработки:", font=("Arial", 12)).pack(pady=5)
 
                 # Чекбоксы для выбора столбцов
                 column_vars = []
                 for col in df.columns:
                     var = BooleanVar()
                     column_vars.append(var)
-                    Checkbutton(selection_window, text=col, variable=var).pack(anchor="w")
+                    ctk.CTkCheckBox(selection_window, text=col, variable=var).pack(anchor="w", pady = 10)
 
                 # Чекбоксы для выбора проблем
-                Label(selection_window, text="Выберите проблемы для обработки:", font=("Arial", 12)).pack(pady=5)
+                ctk.CTkLabel(selection_window, text="Выберите проблемы для обработки:", font=("Arial", 12)).pack(pady = 10)
 
                 problem_vars = {
-                    "remove_trailing_spaces": BooleanVar(),
-                    "convert_negatives": BooleanVar(),
-                    "handle_outliers": BooleanVar(),
-                    "null_replace": BooleanVar(),
+                    "remove_trailing_spaces": ctk.BooleanVar(),
+                    "convert_negatives": ctk.BooleanVar(),
+                    "handle_outliers": ctk.BooleanVar(),
+                    "null_replace": ctk.BooleanVar(),
                 }
 
-                Checkbutton(selection_window, text="Убрать пробелы в конце значений",
+                ctk.CTkCheckBox(selection_window, text="Убрать пробелы в конце значений",
                             variable=problem_vars["remove_trailing_spaces"]).pack(anchor="w")
-                Checkbutton(selection_window, text="Заменить отрицательные значения на модули",
+                ctk.CTkCheckBox(selection_window, text="Заменить отрицательные значения на модули",
                             variable=problem_vars["convert_negatives"]).pack(anchor="w")
-                Checkbutton(selection_window, text="Обработать выбросы",
+                ctk.CTkCheckBox(selection_window, text="Обработать выбросы",
                             variable=problem_vars["handle_outliers"]).pack(anchor="w")
-                Checkbutton(selection_window, text="Аппроксимировать нули",
+                ctk.CTkCheckBox(selection_window, text="Аппроксимировать нули",
                             variable=problem_vars["null_replace"]).pack(anchor="w")
 
-                Button(selection_window, text="Подтвердить выбор", command=submit_selection).pack(pady=10)
+                ctk.CTkButton(selection_window, text="Подтвердить выбор", command=submit_selection).pack(pady=10)
 
                 root.wait_window(selection_window)
                 return selected_columns, selected_problems
@@ -332,38 +364,36 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             quality_data, total_rows = calculate_quality_metrics(df)
 
             # Создаем окно
-            quality_window = Toplevel(root)
+            quality_window = ctk.CTkToplevel(root)
             quality_window.title("Качество данных")
 
-            Label(quality_window, text="Оценка качества данных", font=("Arial", 14, "bold")).pack(pady=10)
+            ctk.CTkLabel(quality_window, text="Оценка качества данных", font=("Arial", 14, "bold")).pack(pady=10)
 
             # Создаем таблицу
-            frame = ttk.Frame(quality_window)
+            frame = ctk.CTkFrame(quality_window)
             frame.pack(fill="both", expand=True)
-            tree = ttk.Treeview(frame, columns=[
-                "Столбец", "Пустые значения", "Нули", "Константа",
-                "Уникальный", "Выбросы", "Отрицательные", "Пробелы в конце"
-            ], show="headings")
 
-            # Определяем заголовки
+            # Заголовки столбцов
             headers = [
                 "Столбец", "Пустые значения", "Нули", "Константа",
                 "Уникальный", "Выбросы", "Отрицательные", "Пробелы в конце"
             ]
-            for col in headers:
-                tree.heading(col, text=col)
-                tree.column(col, anchor="center", width=150)
 
-            # Заполняем таблицу
-            for row in quality_data:
-                tree.insert("", "end", values=row)
+            # Размещение заголовков столбцов
+            for col_num, header in enumerate(headers):
+                label = ctk.CTkLabel(frame, text=header)
+                label.grid(row=0, column=col_num, padx=10, pady=5)
 
-            tree.pack(fill="both", expand=True)
+            # Заполнение таблицы данными
+            for row_num, row_data in enumerate(quality_data, start=1):
+                for col_num, value in enumerate(row_data):
+                    label = ctk.CTkLabel(frame, text=value)
+                    label.grid(row=row_num, column=col_num, padx=10, pady=5)
 
             # Оценка качества данных
             total_issues = sum(int(row[1].split()[0]) for row in quality_data)
             data_quality_score = 100 - (total_issues / (total_rows * len(df.columns)) * 100)
-            Label(
+            ctk.CTkLabel(
                 quality_window,
                 text=f"Оценка качества данных: {data_quality_score:.1f}/100",
                 font=("Arial", 12, "bold")
@@ -379,11 +409,11 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                 "Отрицательные: Количество строк с отрицательными значениями и их доля в процентах.\n"
                 "Пробелы в конце: Количество строк с лишними отступами в конце значений и их доля в процентах."
             )
-            Label(quality_window, text=explanation_text, justify="left", wraplength=600).pack(pady=10)
+            ctk.CTkLabel(quality_window, text=explanation_text, justify="left", wraplength=600).pack(pady=10)
 
             # Кнопка закрытия окна
-            ttk.Button(quality_window, text="Обработать без изменения данных", command=countinue_without_changes).pack(pady=5)
-            ttk.Button(quality_window, text="Улучшить качество данных и обработать", command=improve_data_quality).pack(pady=5)
+            ctk.CTkButton(quality_window, text="Обработать без изменения данных", command=countinue_without_changes).pack(pady=5)
+            ctk.CTkButton(quality_window, text="Улучшить качество данных и обработать", command=improve_data_quality).pack(pady=5)
 
         # Показать окно качества данных
         show_quality_window()
@@ -391,6 +421,21 @@ def process_form1(filepath, progress_var, root, on_form1_done):
 
 
     except Exception as e:
-        # Вывод ошибки при возникновении исключения
-        messagebox.showerror("Ошибка", f"Произошла ошибка при обработке файла формы 1: {e}")
+    # Вывод ошибки при возникновении исключения
+        messge = "Произошла ошибка при обработке файла формы 1: " + str(e)
+        show_error("Ошибка", messge)
         progress_var.set("Ошибка обработки.")
+
+
+def show_error(title, message):
+    error_window = ctk.CTkToplevel()
+    error_window.title(title)
+    error_window.geometry("400x200")
+
+    label = ctk.CTkLabel(error_window, text=message, wraplength=350)
+    label.pack(pady=10, padx=10)
+
+    button = ctk.CTkButton(error_window, text="OK", command=error_window.destroy)
+    button.pack(pady=10)
+
+    error_window.grab_set()

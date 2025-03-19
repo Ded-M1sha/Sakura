@@ -4,6 +4,8 @@ from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Checkbutton, IntVar, Label, Button
 from openpyxl.utils import get_column_letter
 from datetime import datetime
+from form1PD import show_error
+import customtkinter as ctk
 
 # Словарь перевода месяцев
 MONTHS_RU = {
@@ -50,30 +52,30 @@ def choose_filter_columns_and_values(df, root):
             selected_filters[col] = [val for val, var in value_vars.items() if var.get() == 1]
             value_window.destroy()
 
-        value_window = Toplevel(root)
+        value_window = ctk.CTkToplevel(root)
         value_window.title(f"Выбор значений для {col}")
-        Label(value_window, text=f"Выберите значения для фильтрации столбца '{col}':").pack()
+        ctk.CTkLabel(value_window, text=f"Выберите значения для фильтрации столбца '{col}':").pack()
 
         for val, var in value_vars.items():
-            Checkbutton(value_window, text=val, variable=var).pack(anchor="w")
+            ctk.CTkCheckBox(value_window, text=val, variable=var).pack(anchor="w")
 
-        Button(value_window, text="Применить", command=apply_values).pack()
+        ctk.CTkButton(value_window, text="Применить", command=apply_values).pack()
         root.wait_window(value_window)
 
     # Окно для выбора столбцов
     selected_columns = []
-    column_window = Toplevel(root)
+    column_window = ctk.CTkToplevel(root)
     column_window.title("Выбор столбцов для фильтрации")
-    Label(column_window, text="Выберите столбцы для фильтрации данных:").pack()
+    ctk.CTkLabel(column_window, text="Выберите столбцы для фильтрации данных:").pack()
 
     column_vars = {}
     columns = [col for col in df.columns if col not in ["Код товара", "Длина, см", "Ширина, см", "Высота, см"]]
 
     for col in columns:
         column_vars[col] = IntVar()
-        Checkbutton(column_window, text=col, variable=column_vars[col]).pack(anchor="w")
+        ctk.CTkCheckBox(column_window, text=col, variable=column_vars[col]).pack(anchor="w")
 
-    Button(column_window, text="Далее", command=select_columns).pack()
+    ctk.CTkButton(column_window, text="Далее", command=select_columns).pack()
     root.wait_window(column_window)
 
     # Получаем уникальные значения для каждого выбранного столбца
@@ -98,13 +100,13 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
         df_form1 = pd.read_excel(form1_filepath)
         df_form4 = pd.read_excel(filepath)
     except Exception as e:
-        messagebox.showerror("Ошибка", f"Не удалось загрузить файлы. Ошибка: {e}")
+        show_error("Ошибка", f"Не удалось загрузить файлы. Ошибка: {e}")
         root.quit()
         return
 
     # Проверка столбцов
     if 'Код товара' not in df_form4.columns or 'Код товара' not in df_form1.columns:
-        messagebox.showerror("Ошибка", "Отсутствует столбец 'Код товара' в одной из форм.")
+        show_error("Ошибка", "Отсутствует столбец 'Код товара' в одной из форм.")
         root.quit()
         return
 
@@ -117,9 +119,8 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
 
     # Проверяем, что значение не пустое
     if replacement_value is None:
-        messagebox.showerror("Ошибка", "Отсутствует значение для замены в ячейке V6 формы 1.")
-        root.quit()
-        return
+        replacement_value = df_form1['Объем единицы итоговый, м3'].median()
+        show_error("Предупреждение", "Недостающие в справочнике значения будут заменены на среднее")
 
     # Создаем словарь для поиска объема единицы по коду товара
     volume_dict = df_form1.set_index('Код товара')['Объем единицы итоговый, м3'].to_dict()
