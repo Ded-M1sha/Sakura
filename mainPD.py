@@ -5,10 +5,14 @@ from form2PD import process_form2
 from form3PD import process_form3
 from form4PD import process_form4
 from itog import create_summary_from_memory
+from PIL import Image  # Импортируем PIL для работы с изображениями
+
+
+
 
 def main():
     ctk.set_appearance_mode("dark")  # Темная тема
-    ctk.set_default_color_theme("dark-blue")  # Синяя цветовая схема
+    ctk.set_default_color_theme("green")  # Синяя цветовая схема
 
     def choose_file(var_label):
         """Функция для выбора файла и сохранения его пути в переменную."""
@@ -27,7 +31,7 @@ def main():
         elif form_number == 4:
             filepath_var4.set(new_file_path)
 
-        progress_var.set(f"Форма {form_number} обработана успешно.")
+        progress_var.set(f"Форма {form_number} обработана успешно")
         progress_bar.set(1)  # Обновляем прогресс-бар
         root.update_idletasks()
 
@@ -57,11 +61,11 @@ def main():
             if output_file:
                 create_summary_from_memory(forms_data, output_file, filepath_var5)
                 messagebox.showinfo("Успешно", f"Итоговый файл сохранен: {output_file}")
-                progress_var.set("Итоговый файл создан успешно.")
+                progress_var.set("Итоговый файл создан успешно")
                 progress_bar.set(1)
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при создании итогового файла: {e}")
-            progress_var.set("Ошибка при создании итогового файла.")
+            progress_var.set("Ошибка при создании итогового файла")
             progress_bar.set(0)
 
     # Создание основного окна
@@ -75,7 +79,7 @@ def main():
     filepath_var3 = ctk.StringVar()
     filepath_var4 = ctk.StringVar()
     filepath_var5 = ctk.StringVar()
-    progress_var = ctk.StringVar(value="Готово к работе.")
+    progress_var = ctk.StringVar(value="Готово к работе")
 
     # Метка заголовка
     title_label = ctk.CTkLabel(root, text="Выберите файлы:", font=("Arial", 16, "bold"))
@@ -106,7 +110,7 @@ def main():
     ctk.CTkButton(button_frame, text="Обработать форму 4", command=lambda: process_form(4)).pack(side="left", padx=5)
 
     # Кнопка создания итогового файла
-    summary_button = ctk.CTkButton(root, text="Создать итоговый файл", command=create_summary, fg_color="blue")
+    summary_button = ctk.CTkButton(root, text="Создать итоговый файл", command=create_summary, fg_color="green")
     summary_button.pack(pady=10)
 
     # Прогресс-бар
@@ -117,6 +121,13 @@ def main():
     # Метка состояния
     status_label = ctk.CTkLabel(root, textvariable=progress_var, font=("roboto", 12))
     status_label.pack(pady=5)
+
+    # Загружаем изображение
+    footer_image = ctk.CTkImage(light_image=Image.open("logo.png"), size=(700, 400))
+
+    # Создаём метку для изображения
+    footer_label = ctk.CTkLabel(root, image=footer_image, text="")
+    footer_label.pack(side="bottom")  # Размещаем внизу
 
     root.mainloop()
 
