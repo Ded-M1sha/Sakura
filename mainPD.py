@@ -11,7 +11,7 @@ from PIL import Image  # Импортируем PIL для работы с из�
 
 
 def main():
-    ctk.set_appearance_mode("dark")  # Темная тема
+    ctk.set_appearance_mode("ddark")  # Темная тема
     ctk.set_default_color_theme("green")  # Синяя цветовая схема
 
     def choose_file(var_label):
@@ -59,9 +59,8 @@ def main():
             forms_data = {2: filepath_var2.get(), 3: filepath_var3.get(), 4: filepath_var4.get()}
             output_file = filedialog.asksaveasfilename(filetypes=[("Excel Files", "*.xlsx")], defaultextension=".xlsx")
             if output_file:
-                create_summary_from_memory(forms_data, output_file, filepath_var5)
+                create_summary_from_memory(forms_data, output_file, filepath_var5, progress_var)
                 messagebox.showinfo("Успешно", f"Итоговый файл сохранен: {output_file}")
-                progress_var.set("Итоговый файл создан успешно")
                 progress_bar.set(1)
         except Exception as e:
             messagebox.showerror("Ошибка", f"Ошибка при создании итогового файла: {e}")
@@ -122,12 +121,6 @@ def main():
     status_label = ctk.CTkLabel(root, textvariable=progress_var, font=("roboto", 12))
     status_label.pack(pady=5)
 
-    # Загружаем изображение
-    footer_image = ctk.CTkImage(light_image=Image.open("logo.png"), size=(700, 400))
-
-    # Создаём метку для изображения
-    footer_label = ctk.CTkLabel(root, image=footer_image, text="")
-    footer_label.pack(side="bottom")  # Размещаем внизу
 
     root.mainloop()
 
