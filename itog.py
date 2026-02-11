@@ -3,7 +3,8 @@ import pandas as pd
 from tkinter import messagebox
 from Lines import plot_data, read_data_from_excel
 
-def create_summary_from_memory(forms_data, output_filepath, form5_file_path):
+def create_summary_from_memory(forms_data, output_filepath, form5_file_path, progress_var):
+    progress_var.set("Создание итогового файла")
     """
     Создает итоговый файл, собирая данные с листов "СВОД" из обработанных форм,
     и предлагает пользователю визуализировать данные с помощью графиков.
@@ -13,20 +14,24 @@ def create_summary_from_memory(forms_data, output_filepath, form5_file_path):
     :param output_filepath: путь для сохранения итогового файла.
     """
     # Создаем новый файл Excel
+
     summary_wb = openpyxl.Workbook()
     summary_ws = summary_wb.active
     summary_ws.title = "Итоговый СВОД"
 
     # Стартовая строка для копирования данных
     current_row = 1
+    progress_var.set("Создание итогового файла")
 
     for form_number, filepath in forms_data.items():
+        progress_var.set("Создание итогового файла")
         if not filepath:
             # Если файл для формы отсутствует, пропускаем её
             continue
 
         try:
             # Открываем обработанный файл формы
+
             form_wb = openpyxl.load_workbook(filepath, data_only=True)
             if "СВОД" not in form_wb.sheetnames:
                 raise ValueError(f"В файле формы {form_number} отсутствует лист 'СВОД'.")
@@ -51,13 +56,14 @@ def create_summary_from_memory(forms_data, output_filepath, form5_file_path):
 
     # Сохраняем итоговый файл
     summary_wb.save(output_filepath)
-    messagebox.showinfo("Успешно", "Итоговый файл успешно создан!")
+    progress_var.set("Итоговый файл успешно создан")
 
     # Спрашиваем у пользователя, хочет ли он построить графики
     if messagebox.askyesno("Графики", "Хотите создать графики показателей итоговой таблицы?"):
         visualize_summary(output_filepath)
     create_ceil_model(output_filepath)
-    multiply_etalons(output_filepath, form5_file_path)
+    if form5_file_path != "":
+        multiply_etalons(output_filepath, form5_file_path)
 
 
 def visualize_summary(file_path):

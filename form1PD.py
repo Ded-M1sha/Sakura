@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk, BooleanVar, Checkbutton
 import customtkinter as ctk
@@ -77,6 +78,7 @@ def get_upper_limit(root):
 
 
 def process_form1(filepath, progress_var, root, on_form1_done):
+    new_filepath = os.path.join(os.path.dirname(filepath), "Форма 1_обработанная.xlsx")
     try:
         # Загружаем данные из файла
         df = pd.read_excel(filepath)
@@ -142,12 +144,13 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             return quality_data, total_rows
 
         def countinue_without_changes():
+            quality_window.destroy()
             # Добавляем расчет объема в м3 для единицы товара
             df['Объем единицы итоговый, м3'] = df['Длина, см'] * df['Ширина, см'] * df['Высота, см'] * 0.000001
 
 
             # Сохраняем результаты вычислений и исходные данные в новый Excel файл
-            output_path = "Форма 1 обработанная.xlsx"
+            output_path = new_filepath
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
                 # Сохраняем основной обработанный лист
                 df.to_excel(writer, index=False, sheet_name="Обработанные данные")
@@ -161,6 +164,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             пользователем столбцов и проблем для обработки.
             """
             # Запрашиваем верхнюю границу объема у пользователя
+            quality_window.destroy()
             upper_limit = get_upper_limit(root)
             if upper_limit is None:  # Если пользователь отменил ввод
                 progress_var.set("Обработка формы 1 отменена.")
@@ -327,7 +331,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
                 if 'Объем единицы после обработки выбросов, м3' in df.columns: df['Объем единицы итоговый, м3'] =  df['Объем единицы после обработки выбросов, м3']
                 else: df['Объем единицы итоговый, м3'] = df['Объем единицы, м3']
             # Сохраняем результаты вычислений и исходные данные в новый Excel файл
-            output_path = "Форма 1 обработанная.xlsx"
+            output_path = new_filepath
             with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
                 # Сохраняем основной обработанный лист
                 df.to_excel(writer, index=False, sheet_name="Обработанные данные")
@@ -364,6 +368,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             quality_data, total_rows = calculate_quality_metrics(df)
 
             # Создаем окно
+            global quality_window
             quality_window = ctk.CTkToplevel(root)
             quality_window.title("Качество данных")
 
@@ -414,6 +419,7 @@ def process_form1(filepath, progress_var, root, on_form1_done):
             # Кнопка закрытия окна
             ctk.CTkButton(quality_window, text="Обработать без изменения данных", command=countinue_without_changes).pack(pady=5)
             ctk.CTkButton(quality_window, text="Улучшить качество данных и обработать", command=improve_data_quality).pack(pady=5)
+
 
         # Показать окно качества данных
         show_quality_window()
