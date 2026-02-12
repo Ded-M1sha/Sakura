@@ -3,6 +3,7 @@ import numpy as np
 import os
 from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk, BooleanVar, Checkbutton
+from sakura.data_loader import load_file
 import customtkinter as ctk
 
 def choose_column(df, root):
@@ -81,7 +82,8 @@ def process_form1(filepath, progress_var, root, on_form1_done):
     new_filepath = os.path.join(os.path.dirname(filepath), "Форма 1_обработанная.xlsx")
     try:
         # Загружаем данные из файла
-        df = pd.read_excel(filepath)
+        df = load_file(filepath)
+
         df['Длина, см'] = pd.to_numeric(df['Длина, см'])
         df['Ширина, см'] = pd.to_numeric(df['Ширина, см'])
         df['Высота, см'] = pd.to_numeric(df['Высота, см'])
