@@ -36,13 +36,13 @@ def main():
         try:
             progress_bar.set(0.5)  # Устанавливаем промежуточный прогресс
             if form_number == 1:
-                process_form1(filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(1, new_fp))
+                form1.process_form1(filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(1, new_fp))
             elif form_number == 2:
-                process_form2(filepath_var2.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(2, new_fp))
+                form2.process_form2(filepath_var2.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(2, new_fp))
             elif form_number == 3:
-                process_form3(filepath_var3.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(3, new_fp))
+                form3.process_form3(filepath_var3.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(3, new_fp))
             elif form_number == 4:
-                process_form4(filepath_var4.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(4, new_fp))
+                form4.process_form4(filepath_var4.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(4, new_fp))
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось обработать форму {form_number}. Ошибка: {e}")
             progress_var.set(f"Ошибка при обработке формы {form_number}.")

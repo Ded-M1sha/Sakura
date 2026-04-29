@@ -72,7 +72,6 @@ def choose_filter_columns_and_values(df, root):
 def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     new_filepath = os.path.join(os.path.dirname(filepath), "Форма 2_обработанная.xlsx")
 
-
     progress_var.set("Загрузка данных формы 2")
     root.update()
     df_form2 = pd.read_excel(filepath)

@@ -80,7 +80,7 @@ def get_upper_limit(root):
 def process_form1(filepath, progress_var, root, on_form1_done):
     new_filepath = os.path.join(os.path.dirname(filepath), "Форма 1_обработанная.xlsx")
     try:
-        # Загружаем данные из файла
+        # Загрузка данных из файла
         df = pd.read_excel(filepath)
         df['Длина, см'] = pd.to_numeric(df['Длина, см'])
         df['Ширина, см'] = pd.to_numeric(df['Ширина, см'])
