@@ -71,36 +71,32 @@ def plot_data(dates, values, table_titles, file_path):
 
     for date_data, value_data, table_title in zip(dates, values, table_titles):
         for column in value_data.columns:
-            plt.figure(figsize=(12, 7))  # Увеличиваем размер графика
+            plt.figure(figsize=(12, 7))
+            x_indices = np.arange(len(date_data))
 
-            # Создаем числовые индексы для строковых дат
-            x_indices = np.arange(len(date_data))  # Числовые индексы (0, 1, 2, ...)
-
-            # Фильтрация значений дат, чтобы оставить только те, которые заканчиваются на "20"
+            # Фильтрация значений дат
             filtered_dates = [date for date in date_data if date[-4: -2] == '20']
             filtered_indices = [i for i, date in enumerate(date_data) if date[-4: -2] == '20']
             filtered_values = value_data.iloc[filtered_indices]
 
-            # Если фильтрация вернула пустой список, то продолжаем с пустым графиком
             if filtered_dates:
                 plt.plot(filtered_indices, filtered_values[column], marker='o', linestyle='-', color='#e80b16', label=column)
 
-                # Добавляем метки данных на точки графика
+                # Добавление меток данных на точки графика
                 for x, y in zip(filtered_indices, filtered_values[column]):
-                    if isinstance(y, (int, float)) and not np.isnan(y):  # Проверяем, что значение числовое
+                    if isinstance(y, (int, float)) and not np.isnan(y):
                         plt.annotate(f'{y:.0f}', (x, y), textcoords="offset points", xytext=(0, 5),
                                      ha='center', fontsize=9, color='black',
                                      bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="black", lw=0.3))
 
-                # Находим индекс максимального значения
-                if filtered_values[column].dropna().empty:  # Если столбец пуст, пропускаем
+                # ПОиск индекс максимального значения
+                if filtered_values[column].dropna().empty:
                     continue
 
                 max_value_index = filtered_values[column].idxmax()
                 max_x_index = filtered_indices[max_value_index]
                 max_value = filtered_values[column].max()
 
-                # Добавляем точку с максимальным значением
                 plt.scatter(max_x_index, max_value, color='black', label=f'Эталонное значение: {max_value:.0f}', s=100, zorder=5)
 
                 plt.title(f'{table_title}. {column}', fontsize=14, fontweight='bold', family='Calibri')
@@ -109,13 +105,11 @@ def plot_data(dates, values, table_titles, file_path):
                 plt.xticks(filtered_indices, filtered_dates, rotation=45)  # Устанавливаем подписи для оси X
                 plt.grid(True)
                 plt.legend()
-
-                # Явно настраиваем отступы
                 plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.2)
 
-                # Сохраняем график
+                # Сохранение
                 output_path = os.path.join(output_dir, f'{table_title}_{column}.png')
                 plt.savefig(output_path, format='png', dpi=300)
-                plt.close()  # Закрываем фигуру
+                plt.close()
 
 
