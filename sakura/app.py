@@ -1,9 +1,7 @@
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from sakura.forms import form1, form2, form3, form4
-from sakura.processing import summary
-# from sakura.utils import lines
-# from sakura.processing.summary import create_summary_from_memory
+from sakura.processing.summary import create_summary_from_memory
 
 
 def main():
@@ -12,7 +10,16 @@ def main():
 
     def choose_file(var_label):
         """Функция для выбора файла и сохранения его пути в переменную."""
-        file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
+        file_path = filedialog.askopenfilename(
+            title="Выберите файл формы 1",
+            filetypes=[
+                ("Табличные файлы", "*.xlsx *.xls *.csv"),
+                ("Excel файлы", "*.xlsx *.xls"),
+                ("CSV файлы", "*.csv"),
+                ("Все файлы", "*.*"),
+            ]
+        )
+
         if file_path:
             var_label.set(file_path)
 
