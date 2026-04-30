@@ -67,17 +67,12 @@ def create_summary_from_memory(forms_data, output_filepath, form5_file_path, pro
 
 
 def visualize_summary(file_path):
-    """
-    Визуализирует графики из итогового файла.
-    """
+
     sheet_name = "Итоговый СВОД"
-    date_col = 1  # Номер столбца с датами (начиная с 1)
+    date_col = 1
     start_row = 1
 
-    # Чтение данных
     dates, values, table_titles = read_data_from_excel(file_path, sheet_name, date_col, start_row)
-
-    # Построение графиков
     plot_data(dates, values, table_titles, file_path)
 
 def create_ceil_model(file_path):
