@@ -1,9 +1,7 @@
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from sakura.forms import form1, form2, form3, form4
-from sakura.processing import summary
-# from sakura.utils import lines
-# from sakura.processing.summary import create_summary_from_memory
+from sakura.processing.summary import create_summary_from_memory
 
 
 def main():
@@ -12,7 +10,16 @@ def main():
 
     def choose_file(var_label):
         """Функция для выбора файла и сохранения его пути в переменную."""
-        file_path = filedialog.askopenfilename(filetypes=[("Excel Files", "*.xlsx")])
+        file_path = filedialog.askopenfilename(
+            title="Выберите файл формы 1",
+            filetypes=[
+                ("Табличные файлы", "*.xlsx *.xls *.csv"),
+                ("Excel файлы", "*.xlsx *.xls"),
+                ("CSV файлы", "*.csv"),
+                ("Все файлы", "*.*"),
+            ]
+        )
+
         if file_path:
             var_label.set(file_path)
 
@@ -36,13 +43,13 @@ def main():
         try:
             progress_bar.set(0.5)  # Устанавливаем промежуточный прогресс
             if form_number == 1:
-                process_form1(filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(1, new_fp))
+                form1.process_form1(filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(1, new_fp))
             elif form_number == 2:
-                process_form2(filepath_var2.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(2, new_fp))
+                form2.process_form2(filepath_var2.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(2, new_fp))
             elif form_number == 3:
-                process_form3(filepath_var3.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(3, new_fp))
+                form3.process_form3(filepath_var3.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(3, new_fp))
             elif form_number == 4:
-                process_form4(filepath_var4.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(4, new_fp))
+                form4.process_form4(filepath_var4.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(4, new_fp))
         except Exception as e:
             messagebox.showerror("Ошибка", f"Не удалось обработать форму {form_number}. Ошибка: {e}")
             progress_var.set(f"Ошибка при обработке формы {form_number}.")

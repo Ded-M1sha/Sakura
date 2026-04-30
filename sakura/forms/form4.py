@@ -5,6 +5,7 @@ from tkinter import messagebox, Toplevel, Checkbutton, IntVar, Label, Button
 from openpyxl.utils import get_column_letter
 from datetime import datetime
 from .form1 import show_error
+from sakura.data_loader import load_file
 import customtkinter as ctk
 
 # Словарь перевода месяцев
@@ -97,8 +98,8 @@ def process_form4(filepath, form1_filepath, progress_var, root, on_form4_done):
         root.update()
 
         # Загружаем данные форм
-        df_form1 = pd.read_excel(form1_filepath)
-        df_form4 = pd.read_excel(filepath)
+        df_form1 = load_file(form1_filepath)
+        df_form4 = load_file(filepath)
     except Exception as e:
         show_error("Ошибка", f"Не удалось загрузить файлы. Ошибка: {e}")
         root.quit()
