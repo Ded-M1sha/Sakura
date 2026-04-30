@@ -157,8 +157,10 @@ def multiply_etalons(file_path, form5_file_path):
 
     #расчет коэффициентов роста
     for col in df_koef.columns[1:]:  # df.columns[1:] — все столбцы, кроме первого
-        df_koef[col] = pd.to_numeric(df_koef[col], errors="ignore")
-    #df_koef["Коэффициент роста"] = 0
+        df_koef[col] = df_koef[col].str.replace(",", ".")
+        # Конвертируем в числа, превращая ошибки в пустые значения (NaN)
+        df_koef[col] = pd.to_numeric(df_koef[col], errors="coerce").fillna(1)
+        #df_koef["Коэффициент роста"] = 0
     koef =[]
     for ind, row in df_koef.iterrows():
         s = 1

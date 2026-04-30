@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 from sakura.forms import form1, form2, form3, form4
-from sakura.processing import summary
+from sakura.processing.summary import create_summary_from_memory
 
 
 def main():

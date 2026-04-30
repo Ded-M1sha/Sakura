@@ -117,10 +117,10 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     df_form2['Итоговый объем, м3'] = df_form2['Объем единицы, м3'] * df_form2['Количество с учетом единицы измерения']
 
     # Приводим дату к английскому формату
+    df_form2['Дата'] = pd.to_datetime(df_form2['Дата'], dayfirst=True)
     df_form2['Приведенная дата'] = df_form2['Дата'].apply(
         lambda x: x.strftime("%B %Y") if pd.notnull(x) else None
     )
-
     df_form2.to_excel(new_filepath, index=False)
 
     progress_var.set("Запрос фильтров у пользователя")
