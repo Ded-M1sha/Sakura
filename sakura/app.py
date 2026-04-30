@@ -45,7 +45,6 @@ def main():
             if form_number == 1:
                 form1.process_form1(filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(1, new_fp))
             elif form_number == 2:
-
                 form2.process_form2(filepath_var2.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(2, new_fp))
             elif form_number == 3:
                 form3.process_form3(filepath_var3.get(), filepath_var1.get(), progress_var, root, lambda new_fp: on_form_done(3, new_fp))
