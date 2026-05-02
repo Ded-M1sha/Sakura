@@ -32,7 +32,7 @@ def create_summary_from_memory(forms_data, output_filepath, form5_file_path, pro
         try:
             # Открываем обработанный файл формы
 
-            form_wb = openpyxl.load_workbook(filepath, data_only=True)
+            form_wb = openpyxl.load_workbook(filepath, data_only=True, read_only=True)
             if "СВОД" not in form_wb.sheetnames:
                 raise ValueError(f"В файле формы {form_number} отсутствует лист 'СВОД'.")
 
@@ -53,6 +53,7 @@ def create_summary_from_memory(forms_data, output_filepath, form5_file_path, pro
 
         except Exception as e:
             print(f"Ошибка обработки файла формы {form_number}: {e}")
+        form_wb.close()
 
     # Сохраняем итоговый файл
     summary_wb.save(output_filepath)

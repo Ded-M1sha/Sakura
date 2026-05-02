@@ -5,6 +5,32 @@ from openpyxl import load_workbook
 from tkinter import messagebox, Toplevel, Button, Label, simpledialog, ttk, BooleanVar, Checkbutton
 from sakura.data_loader import load_file
 import customtkinter as ctk
+from pathlib import Path
+
+
+
+MAX_EXCEL_ROWS = 1_048_570
+
+def save_processed_form1(df, output_path):
+    output_path = Path(output_path)
+
+    if len(df) <= MAX_EXCEL_ROWS:
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="Обработанные данные")
+
+            workbook = writer.book
+            sheet = writer.sheets["Обработанные данные"]
+
+            # Ниже оставь свою существующую логику оформления,
+            # например запись служебных значений в ячейки:
+            # sheet["V6"] = Q6
+            # sheet["V7"] = Q7
+            # ...
+        return str(output_path), "xlsx"
+
+    csv_path = output_path.with_suffix(".csv")
+    df.to_csv(csv_path, index=False, sep=";", encoding="utf-8-sig")
+    return str(csv_path), "csv"
 
 def choose_column(df, root):
     """

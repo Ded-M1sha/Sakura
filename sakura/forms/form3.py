@@ -128,35 +128,61 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
     root.update()
 
     # Добавляем столбцы в DataFrame
-    df_form3['Объем единицы, м3'] = None
+    df_form3['Объем единицы, м3'] = df_form3['Код товара'].map(
+        lambda code: volume_dict.get(code, replacement_value)
+    )
     df_form3['Количество с учетом единицы измерения'] = None
     df_form3['Итоговый объем, м3'] = None
     df_form3['Приведенная дата'] = None
+
+    progress_var.set("Проверка числовых столбцов")
+    root.update()
+
+    df_form3['Объем единицы, м3'] = pd.to_numeric(
+        df_form3['Объем единицы, м3'],
+        errors='coerce'
+    )
+
+    if 'Количество' not in df_form3.columns:
+        show_error("Ошибка", "Отсутствует столбец 'Количество' в форме 3. Обработка остановлена")
+        return
+
+    df_form3['Количество_число'] = pd.to_numeric(
+        df_form3['Количество'].astype(str).str.replace(',', '.', regex=False).str.strip(),
+        errors='coerce'
+    )
+
+    bad_qty = df_form3[df_form3['Количество_число'].isna() & df_form3['Количество'].notna()]
+    bad_vol = df_form3[df_form3['Объем единицы, м3'].isna()]
+
+    if not bad_qty.empty:
+        bad_rows = (bad_qty.index + 2).tolist()[:10]
+        show_error(
+            "Ошибка",
+            "В столбце 'Количество' формы 3 обнаружены нечисловые значения.\n"
+            f"Примеры строк: {bad_rows}"
+        )
+        return
+
+    if not bad_vol.empty:
+        bad_rows = (bad_vol.index + 2).tolist()[:10]
+        show_error(
+            "Ошибка",
+            "Не удалось определить числовой 'Объем единицы, м3' в форме 3.\n"
+            f"Примеры строк: {bad_rows}"
+        )
+        return
+
+    df_form3['Количество с учетом единицы измерения'] = df_form3['Количество_число']
+    df_form3['Итоговый объем, м3'] = (
+            df_form3['Объем единицы, м3'] * df_form3['Количество с учетом единицы измерения']
+    )
 
     # Обработка строк формы 3
     progress_var.set("Обработка строк формы 3...")
     root.update()
     # Приводим дату к английскому формату
 
-    for idx, row in df_form3.iterrows():
-        code = row['Код товара']
-        date = pd.to_datetime(row['Дата'], errors='coerce', dayfirst=True)
-
-        # Определяем "Объем единицы, м3"
-        volume = volume_dict.get(code, replacement_value)
-
-        # Вычисляем "Итоговый объем, м3"
-        final_volume = volume * row['Количество']
-
-        # Записываем результаты в DataFrame
-        df_form3.at[idx, 'Объем единицы, м3'] = volume
-
-        df_form3.at[idx, 'Итоговый объем, м3'] = final_volume
-
-
-        # Обновление прогресса
-        progress_var.set(f"Обработка данных: {idx + 1} / {len(df_form3)} строк")
-        root.update()
 
 
     # Приведение столбца 'Дата' к формату datetime
@@ -225,20 +251,25 @@ def process_form3(filepath, form1_filepath, progress_var, root, on_form3_done):
             continue  # Пропускаем некорректные даты
 
         # Заполняем данные
-        sheet_svod[f"B{idx}"] = date_data['Итоговый объем, м3'].sum()
-        sheet_svod[f"C{idx}"] = date_data.shape[0]  # Количество строк
-        sheet_svod[f"D{idx}"] = date_data['Количество'].sum()
+        volume_sum = date_data['Итоговый объем, м3'].sum()
+        quantity_sum = date_data['Количество'].sum()
         document_count = date_data['Номер документа'].nunique()
+
+        sheet_svod[f"B{idx}"] = volume_sum
+        sheet_svod[f"C{idx}"] = date_data.shape[0]
+        sheet_svod[f"D{idx}"] = quantity_sum
         sheet_svod[f"E{idx}"] = document_count
 
         if month is not None:
-            daily_document_average = document_count / days_in_month[month]
-            daily_volume_average = sheet_svod[f"B{idx}"].value / days_in_month[month]
-            daily_quantity_average = sheet_svod[f"D{idx}"].value / days_in_month[month]
+            days = days_in_month.get(month, 0) or 0
+            if days > 0:
+                daily_document_average = float(document_count) / days
+                daily_volume_average = float(volume_sum or 0) / days
+                daily_quantity_average = float(quantity_sum or 0) / days
 
-            sheet_svod[f"F{idx}"] = round(daily_document_average, 2)
-            sheet_svod[f"G{idx}"] = round(daily_volume_average, 2)
-            sheet_svod[f"H{idx}"] = round(daily_quantity_average, 2)
+                sheet_svod[f"F{idx}"] = round(daily_document_average, 2)
+                sheet_svod[f"G{idx}"] = round(daily_volume_average, 2)
+                sheet_svod[f"H{idx}"] = round(daily_quantity_average, 2)
 
         # Обновление прогресса
         progress_var.set(f"Заполнение сводных данных: {idx - 1} / {len(unique_dates)} дат")

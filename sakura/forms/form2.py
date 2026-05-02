@@ -79,6 +79,7 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
 
     progress_var.set("Загрузка данных формы 1")
     root.update()
+
     workbook_form1 = load_workbook(form1_filepath, data_only=True)
     sheet_form1 = workbook_form1.active
 
@@ -106,14 +107,64 @@ def process_form2(filepath, form1_filepath, progress_var, root, on_form2_done):
     df_form2['Объем единицы, м3'] = df_form2['Код товара'].apply(
         lambda code: volume_dict.get(code, replacement_value)
     )
+    progress_var.set("Проверка числовых столбцов")
+    root.update()
+
+    # Приводим объем к числу
+    df_form2['Объем единицы, м3'] = pd.to_numeric(
+        df_form2['Объем единицы, м3'],
+        errors='coerce'
+    )
+
+    # Проверяем наличие обязательного столбца
+    if 'Количество' not in df_form2.columns:
+        show_error("Ошибка", "Отсутствует столбец 'Количество' в форме 2. Обработка остановлена")
+        return
+
+    # Приводим количество к числу
+    df_form2['Количество_число'] = pd.to_numeric(
+        df_form2['Количество'].astype(str).str.replace(',', '.', regex=False).str.strip(),
+        errors='coerce'
+    )
+
+    # Ищем проблемные строки
+    bad_qty = df_form2[df_form2['Количество_число'].isna() & df_form2['Количество'].notna()]
+    bad_vol = df_form2[df_form2['Объем единицы, м3'].isna()]
+
+    if not bad_qty.empty:
+        bad_rows = (bad_qty.index + 2).tolist()[:10]
+        show_error(
+            "Ошибка",
+            "В столбце 'Количество' обнаружены нечисловые значения.\n"
+            f"Примеры строк: {bad_rows}"
+        )
+        return
+
+    if not bad_vol.empty:
+        bad_rows = (bad_vol.index + 2).tolist()[:10]
+        show_error(
+            "Ошибка",
+            "Не удалось определить числовой 'Объем единицы, м3'.\n"
+            f"Примеры строк: {bad_rows}"
+        )
+        return
+
+    # Расчет количества с учетом единицы измерения
     if 'ед. изм.' in df_form2.columns:
         df_form2['Количество с учетом единицы измерения'] = df_form2.apply(
-            lambda row: row['Количество'] if row['ед. изм.'] == 'шт' else (row['Количество'] // 1 + 1), axis=1
+            lambda row: row['Количество_число']
+            if row['ед. изм.'] == 'шт'
+            else int(row['Количество_число']) if row['Количество_число'] == int(row['Количество_число'])
+            else int(row['Количество_число']) + 1,
+            axis=1
         )
     else:
-        df_form2['Количество с учетом единицы измерения'] = df_form2['Количество']
+        df_form2['Количество с учетом единицы измерения'] = df_form2['Количество_число']
 
-    df_form2['Итоговый объем, м3'] = df_form2['Объем единицы, м3'] * df_form2['Количество с учетом единицы измерения']
+    df_form2['Итоговый объем, м3'] = (
+            df_form2['Объем единицы, м3'] * df_form2['Количество с учетом единицы измерения']
+    )
+
 
     # Приводим дату к английскому формату
     df_form2['Дата'] = pd.to_datetime(df_form2['Дата'], dayfirst=True)
